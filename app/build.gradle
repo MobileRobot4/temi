@@ -48,4 +48,12 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.16'
     annotationProcessor 'org.projectlombok:lombok:1.18.16'
 
+    // porcupine
+    implementation 'ai.picovoice:porcupine-android:3.0.0'
+
+    // TensorFlow Lite
+    implementation 'org.tensorflow:tensorflow-lite-task-audio:0.4.0'
+    // AndroidX Support Library
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.0'
+
 }
