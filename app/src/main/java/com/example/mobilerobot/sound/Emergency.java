@@ -6,11 +6,16 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter @Setter
 public class Emergency {
 
     private EmergencyType type;
     private long timestamp;
+
+    public Emergency(EmergencyType type, long timestamp) {
+        this.type = type;
+        this.timestamp = timestamp;
+    }
+
 
 }
