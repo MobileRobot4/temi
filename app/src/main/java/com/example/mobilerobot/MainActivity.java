@@ -26,17 +26,19 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.database.annotations.NotNull;
 import com.robotemi.sdk.Robot;
+import com.robotemi.sdk.listeners.OnRobotReadyListener;
 
 import lombok.NonNull;
 
 public class
 
-MainActivity extends AppCompatActivity {
+MainActivity extends AppCompatActivity implements OnRobotReadyListener {
     private static final int REQUEST_RECORD_AUDIO = 1001;
 
     private PorcupineVoiceDetector voiceDetector;
     private EmergencyNotifier emergencyNotifier;
     private ContactToGuardian contactToGuardian;
+    private Robot robot;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference myRef = firebaseDatabase.getReference();
@@ -68,8 +70,19 @@ MainActivity extends AppCompatActivity {
             }
         });
 
+        robot = Robot.getInstance();
+        robot.addOnRobotReadyListener(this);
+    }
+
+
+    @Override
+    public void onRobotReady(boolean ready) {
+        if (!ready) {
+            System.out.println("temi가 아직 준비되지 않았습니다.");
+            return;
+        }
         // 알림 객체 생성
-        String temiId = Robot.getInstance().getSerialNumber();
+        String temiId = robot.getSerialNumber();
 
         if (temiId == null) {
 //            throw new IllegalArgumentException("temi가 준비되지 않았습니다.");
@@ -158,4 +171,5 @@ MainActivity extends AppCompatActivity {
             }
         }
     }
+
 }
