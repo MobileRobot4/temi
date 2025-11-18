@@ -98,6 +98,9 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
             );
         } else {
             setupVoiceDetector();
+            if (voiceDetector != null) {
+                voiceDetector.start();
+            }
         }
     }
 
@@ -121,21 +124,6 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
         );
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        if (voiceDetector != null) {
-            voiceDetector.start();
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (voiceDetector != null) {
-            voiceDetector.stop();
-        }
-    }
 
     @Override
     protected void onDestroy() {
