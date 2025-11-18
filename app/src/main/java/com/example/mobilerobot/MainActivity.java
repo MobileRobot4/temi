@@ -73,6 +73,7 @@ MainActivity extends AppCompatActivity {
 
         if (temiId == null) {
 //            throw new IllegalArgumentException("temi가 준비되지 않았습니다.");
+            System.out.println("temi가 준비되지 않았습니다.");
         }
         emergencyNotifier = new EmergencyNotifier(this, temiId);
         contactToGuardian = new ContactToGuardian(this);
@@ -153,6 +154,7 @@ MainActivity extends AppCompatActivity {
                         "마이크 권한이 없어 음성 인식을 사용할 수 없습니다.",
                         Toast.LENGTH_LONG
                 ).show();
+                System.out.println("마이크 권한이 없어 음성 인식을 사용할 수 없습니다.");
             }
         }
     }

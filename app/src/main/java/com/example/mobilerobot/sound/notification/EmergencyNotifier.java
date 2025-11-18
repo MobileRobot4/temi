@@ -28,10 +28,12 @@ public class EmergencyNotifier {
 
         reference.setValue(emergency)
                 .addOnSuccessListener(unused ->
-                        Toast.makeText(context, "긴급 신호 전송 완료", Toast.LENGTH_SHORT).show()
+//                        Toast.makeText(context, "긴급 신호 전송 완료", Toast.LENGTH_SHORT).show()
+                                System.out.println("긴급 신호 전송 완료")
                 )
                 .addOnFailureListener(e ->
-                        Toast.makeText(context, "Firebase 전송 실패: " + e.getMessage(), Toast.LENGTH_LONG).show()
+//                        Toast.makeText(context, "Firebase 전송 실패: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                                System.out.println("Firebase 전송 실패")
                 );
     }
 

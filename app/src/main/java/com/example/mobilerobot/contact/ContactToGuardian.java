@@ -23,7 +23,8 @@ public class ContactToGuardian {
         UserInfo guardian = findGuardian(userName, temi);
 
         if (guardian == null) {
-            Toast.makeText(this.context, "보호자 정보를 찾지 못했습니다.", Toast.LENGTH_LONG).show();
+//            Toast.makeText(this.context, "보호자 정보를 찾지 못했습니다.", Toast.LENGTH_LONG).show();
+            System.out.println("보호자 정보를 찾지 못했습니다.");
         }
 
         temi.startTelepresence(
