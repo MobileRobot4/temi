@@ -34,6 +34,7 @@ public class PorcupineVoiceDetector {
         PorcupineManagerCallback callback = new PorcupineManagerCallback() {
             @Override
             public void invoke(int keywordIndex) {
+                System.out.println("Porcupine 탐지중");
                 if (onWakeWordListener != null) {
                     onWakeWordListener.onWakeWordDetected();
                 }
@@ -47,7 +48,10 @@ public class PorcupineVoiceDetector {
                     .setModelPath(modelPath)
                     .build(context, callback);
 
+            System.out.println("PorcupineManager 생성 완료");
+
         } catch (PorcupineException e) {
+            System.out.println("Porcupine 생성 실패" + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -58,7 +62,9 @@ public class PorcupineVoiceDetector {
         }
 
         try {
+            System.out.println("PorcupineManager.start() 호출");
             porcupineManager.start();
+            System.out.println("PorcupineManager.start() 시작");
         } catch (PorcupineException e) {
             e.printStackTrace();
         }
@@ -70,6 +76,8 @@ public class PorcupineVoiceDetector {
         }
 
         try {
+
+            System.out.println("PorcupineManager.stop() 호출");
             porcupineManager.stop();
         } catch (PorcupineException e) {
             e.printStackTrace();
@@ -81,6 +89,7 @@ public class PorcupineVoiceDetector {
             throw new IllegalArgumentException("porcupineManager가 생성되지 않았습니다.");
         }
 
+        System.out.println("PorcupineManager.delete() 호출");
         porcupineManager.delete();
         porcupineManager = null;
     }
