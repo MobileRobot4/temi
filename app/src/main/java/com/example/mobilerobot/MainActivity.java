@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.mobilerobot.FirebaseDataFormat;
+import com.example.mobilerobot.contact.ContactToGuardian;
 import com.example.mobilerobot.sound.detect.PorcupineVoiceDetector;
 import com.example.mobilerobot.sound.notification.EmergencyNotifier;
 import com.example.temicommunication.R;
@@ -35,6 +36,7 @@ MainActivity extends AppCompatActivity {
 
     private PorcupineVoiceDetector voiceDetector;
     private EmergencyNotifier emergencyNotifier;
+    private ContactToGuardian contactToGuardian;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference myRef = firebaseDatabase.getReference();
@@ -73,6 +75,7 @@ MainActivity extends AppCompatActivity {
 //            throw new IllegalArgumentException("temi가 준비되지 않았습니다.");
         }
         emergencyNotifier = new EmergencyNotifier(this, temiId);
+        contactToGuardian = new ContactToGuardian(this);
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -92,12 +95,14 @@ MainActivity extends AppCompatActivity {
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     // 여기서 "살려주세요" 인식됨
-                    Toast.makeText(
-                            MainActivity.this,
-                            "살려주세요 인식됨! Firebase로 긴급신호 전송",
-                            Toast.LENGTH_SHORT
-                    ).show();
+//                    Toast.makeText(
+//                            MainActivity.this,
+//                            "살려주세요 인식됨! Firebase로 긴급신호 전송",
+//                            Toast.LENGTH_SHORT
+//                    ).show();
+                    System.out.println("살려주세요 인식됨");
                     emergencyNotifier.sendVoiceHelp();
+                    contactToGuardian.callGuardian("강하나");
                 })
         );
     }
