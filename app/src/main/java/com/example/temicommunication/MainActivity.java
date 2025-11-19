@@ -21,7 +21,9 @@ import com.google.firebase.database.annotations.NotNull;
 public class MainActivity extends AppCompatActivity {
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
-    DatabaseReference myRef = firebaseDatabase.getReference();
+    DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
+    DatabaseReference heartRateRef = firebaseDatabase.getReference("HeartRate");
+    DatabaseReference sensorRef = firebaseDatabase.getReference("Sensor");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,20 +34,43 @@ public class MainActivity extends AppCompatActivity {
         TextView distanceText = (TextView)findViewById(R.id.textDistance);
         Button buttonDistance = (Button)findViewById(R.id.buttonDistance);
         TextView distanceText2 = (TextView)findViewById(R.id.textDistance2);
-
-
-        myRef.addValueEventListener(new ValueEventListener() {
+        Log.d("firebase",firebaseDatabase.toString());
+        analysisRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NotNull DataSnapshot snapshot) {
-                FirebaseDataFormat value = snapshot.getValue(FirebaseDataFormat.class);
-                System.out.println("Success to read value : " + value.toString());
-                distanceText.setText("success");
+                AnalysisData value = snapshot.getValue(AnalysisData.class);
+                Log.d("analysis", value.toString());
             }
 
             @Override
             public void onCancelled(@NotNull DatabaseError error) {
-                System.out.println("Failed to read value : " + error.toException());
-                distanceText.setText("fail");
+                Log.e("analysis", error.getMessage());
+            }
+        });
+
+        heartRateRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                HeartRateData value = snapshot.getValue(HeartRateData.class);
+                Log.d("heart", value.toString());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.e("heart", error.getMessage());
+            }
+        });
+
+        sensorRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                SensorData value = snapshot.getValue(SensorData.class);
+                Log.d("sensor", value.toString());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.e("sensor", error.getMessage());
             }
         });
     }
