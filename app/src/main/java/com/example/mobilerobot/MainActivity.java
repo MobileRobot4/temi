@@ -108,7 +108,7 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
     private void setupVoiceDetector() {
         voiceDetector = new PorcupineVoiceDetector(
                 this,
-                new String[]{"sallyeojuseyo_ko_android_v3_0_0.ppn"}, // assets 안의 키워드 파일 이름
+                new String[]{"sallyeojuseyo_ko_android_v3_0_0.ppn", "dowajueo_ko_android_v3_0_0.ppn"}, // assets 안의 키워드 파일 이름
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     // 여기서 "살려주세요" 인식됨
