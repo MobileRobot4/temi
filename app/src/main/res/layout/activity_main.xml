@@ -7,40 +7,6 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/buttonCheckHeart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="심박수측정하기(약20초)"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.058" />
-
-    <Button
-        android:id="@+id/buttonExercise"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="운동시작"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.194" />
-
-    <Button
-        android:id="@+id/buttonSleep"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="취침시작"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.329" />
-
-    <Button
         android:id="@+id/buttonSetGuardian"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -49,14 +15,48 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.609" />
+        app:layout_constraintVertical_bias="0.726" />
+
+    <Button
+        android:id="@+id/buttonSleep"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="취침시작"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.499"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.446" />
+
+    <Button
+        android:id="@+id/buttonCheckHeart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="심박수측정하기(약20초)"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.175" />
+
+    <Button
+        android:id="@+id/buttonExercise"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="운동시작"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.311" />
 
     <Button
         android:id="@+id/buttonEmergency"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="긴급상황"
-        tools:layout_editor_absoluteX="596dp"
-        tools:layout_editor_absoluteY="376dp" />
+        tools:layout_editor_absoluteX="595dp"
+        tools:layout_editor_absoluteY="464dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

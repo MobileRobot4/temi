@@ -1,7 +1,6 @@
 package com.example.temicommunication;
 
 import android.graphics.Color;
-import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +11,10 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
 
 //import com.robotemi.sdk.UserInfo;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.RequestOptions;
 
 import java.util.ArrayList;
 
@@ -61,14 +64,16 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-
             profile = (ImageView) itemView.findViewById(R.id.profile);
             name = (TextView) itemView.findViewById(R.id.name);
             button = itemView.findViewById(R.id.button);
         }
 
         void onBind(UserInfo item){
-            profile.setImageURI(null);
+            String imageUrl = item.getPicUrl();
+            Glide.with(itemView.getContext())
+                    .load(imageUrl)
+                    .into(profile);
             name.setText(item.getName());
             if(guardianList.contains(item)) {
                 button.setBackgroundColor(Color.RED);

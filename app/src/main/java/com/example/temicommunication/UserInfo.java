@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserInfoTest implements Parcelable { // 🟢 1. Parcelable 상속
+public class UserInfo implements Parcelable { // 🟢 1. Parcelable 상속
 
     // Lombok이 getter/setter, equals, hashCode 등을 자동으로 생성합니다.
     String UserId;

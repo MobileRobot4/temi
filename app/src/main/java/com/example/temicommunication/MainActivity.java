@@ -1,6 +1,7 @@
 package com.example.temicommunication;
 
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -24,12 +25,15 @@ import com.google.firebase.database.annotations.NotNull;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import com.robotemi.sdk.Robot;
+/*import com.robotemi.sdk.Robot;
 import com.robotemi.sdk.TtsRequest;
 import com.robotemi.sdk.UserInfo;
 import com.robotemi.sdk.constants.Platform;
+import com.robotemi.sdk.listeners.OnBeWithMeStatusChangedListener;
 import com.robotemi.sdk.listeners.OnRobotReadyListener;
+import com.robotemi.sdk.listeners.OnTelepresenceStatusChangedListener;
 import com.robotemi.sdk.model.MemberStatusModel;
+import com.robotemi.sdk.telepresence.CallState;*/
 
 import java.lang.reflect.Type;
 import java.time.LocalDateTime;
@@ -39,41 +43,55 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressLint("NewApi")
 public class MainActivity extends AppCompatActivity
-implements OnRobotReadyListener {
+        /*implements OnRobotReadyListener, OnBeWithMeStatusChangedListener*/ {
+
+    private ValueEventListener emergencyCancelButtonListener;
+    //private OnTelepresenceStatusChangedListener callStatusListener;
+    private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
+    private static final int REQUEST_CODE_FOR_EMERGENCY = 1002;
+    private static final int EMERGENCY_COUNT_MAX = 2; //파이어베이스주기가 약5초로확인됨 실제 초수는 곱하기5해줘야됨
+    private static final long EMERGENCY_CANCEL_WAIT_TIME = 8;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
     DatabaseReference heartRateRef = firebaseDatabase.getReference("HeartRate");
     DatabaseReference sensorRef = firebaseDatabase.getReference("Sensor");
+    DatabaseReference emergencyCancelRef = firebaseDatabase.getReference("EmergencyCancel");
+    DatabaseReference emergencyRef = firebaseDatabase.getReference("Emergency");
     Button buttonCheckHeart;
     Button buttonExercise;
     Button buttonSleep;
     Button buttonEmergency;
     Button buttonSetGuardian;
     float[] stableHeartRate = new float[20];
-    float stableHeartRateAvg = 0;
+    float stableHeartRateAvg = 100;
     boolean checkHeartRate = false;
     boolean isExercise = false;
     boolean isSleep = false;
+    boolean emergency = false;
+    boolean hideEmergengyButton = true;
     int checkHeartRateCount = 0;
+    int emergencyHeartCount = 0;
     LocalDateTime checkHeartRateStartDate;
     LocalDateTime heartRateCheckTime;
-    boolean emergency = false;
-    int emergencyCount = 0;
-    final int emergencyCountMax = 30;
-    boolean hideEmergengyButton = true;
-    Robot robot;
+    LocalDateTime emergencyStartTime;
+    //Robot robot;
     List<UserInfo> guardians = new ArrayList<>();
-
-    private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
+    List<UserInfo> calledGuardians = new ArrayList<>();
+    //Map<String, MemberStatusModel> statusMap = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        robot = Robot.getInstance();
+        //robot = Robot.getInstance();
         loadGuardianList();
+        setupEmergencyCancelButtonListener();
+        //setupCallStatusListener();
+        emergencyCancelRef.setValue(false);
+        emergencyRef.setValue(false);
         heartRateCheckTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         buttonCheckHeart = (Button)findViewById(R.id.buttonCheckHeart);
         buttonCheckHeart.setOnClickListener(new View.OnClickListener() {
@@ -123,25 +141,17 @@ implements OnRobotReadyListener {
         buttonEmergency.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //여기에 응급상황발생시의 로직 생성
-                TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요",false);
-                robot.speak(ttsRequest);
-                //보호자에게전화걸기
-                //전화가능상태를 가져와서 전화가능한사람먼저 통화
-                //전화거는거는 테미앱, 테미센터(데스크탑)두가지가 존재
-                List<MemberStatusModel> statusList = robot.getMembersStatus();
-                Map<String, MemberStatusModel> statusMap = new HashMap<>();
-                for(MemberStatusModel status : statusList){
-                    statusMap.put(status.getMemberId(), status);
-                }
-                for(UserInfo user : guardians) {
-                    MemberStatusModel status = statusMap.get(user.getUserId());
-                    if(status.getMobileStatus()==0){
-                        Log.d("전화",robot.startTelepresence("보호자통화",user.getUserId(),Platform.MOBILE));
-                    } else if(status.getCenterStatus() == 0){
-                        robot.startTelepresence("보호자통화",user.getUserId(),Platform.TEMI_CENTER);
-                    }
-                }
+                //여기에 응급상황(의심)발생시의 로직 생성
+                /*TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요",false);
+                robot.speak(ttsRequest);*/
+                emergencyCancelRef.setValue(false);
+                emergency=true;
+                emergencyRef.setValue(true);
+                emergencyCancelRef.addValueEventListener(emergencyCancelButtonListener);
+                emergencyStartTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+                Intent intent = new Intent(MainActivity.this,EmergencyCancelActivity.class);
+                intent.putExtra("startTime", emergencyStartTime);
+                startActivityForResult(intent,REQUEST_CODE_FOR_EMERGENCY);
             }
         });
         buttonSetGuardian = findViewById(R.id.buttonSetGuardian);
@@ -149,7 +159,7 @@ implements OnRobotReadyListener {
             @Override
             public void onClick(View view) {
                 if(guardians.size() == 0) {
-                    guardians.add(new UserInfo("test_user_1","테스트1","http://example.com/profile.jpg",0));
+                    guardians.add(new UserInfo("test_user_1","테스트1","https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/3c7d47258ab81fa7b96b7350be84d1bc/2e2f07cd-cce1-4ed4-9fbd-7b2266963dba.jpeg",0));
                 }
                 Intent intent = new Intent (MainActivity.this,GuardianActivity.class);
                 ArrayList<UserInfo> guardianList = new ArrayList<>(guardians);
@@ -157,7 +167,9 @@ implements OnRobotReadyListener {
                 ArrayList<UserInfo> users = new ArrayList<>(/*robot.getAllContact()*/);
                 if(users.size() == 0) {
                     users.add(guardians.get(0));
-                    users.add(new UserInfo("test_user_2","테스트2","http://example.com/profile2.jpg",2));
+                    for(int i = 0; i<20 ; i++) {
+                        users.add(new UserInfo("test_user_" + i,"테스트" + i,"https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/f90924b852d82738de251e10956cd2ba/c7183245-e8d6-4d47-ac1b-30563c02907c.jpeg",2));
+                    }
                 }
                 intent.putParcelableArrayListExtra("users",users);
                 startActivityForResult(intent, REQUEST_CODE_FOR_GUARDIAN);
@@ -168,7 +180,14 @@ implements OnRobotReadyListener {
             public void onDataChange(DataSnapshot snapshot) {
                 HeartRateData value = snapshot.getValue(HeartRateData.class);
                 Log.d("confirm", value.toString());
-                if(heartRateCheckTime.isBefore(LocalDateTime.parse(value.getCheckData()))){
+                LocalDateTime checkTime = LocalDateTime.parse(value.getCheckData());
+                if(heartRateCheckTime.isBefore(checkTime)){
+                    if(emergency){
+                        if(emergencyStartTime.plusSeconds(EMERGENCY_CANCEL_WAIT_TIME).isBefore(checkTime)){
+                            //callEmergency();
+                            emergencyStartTime = emergencyStartTime.plusYears(1000);
+                        }
+                    }
                     if(checkHeartRate){
                         if(checkHeartRateStartDate.isBefore(LocalDateTime.parse(value.getHeartDate()))){
                             stableHeartRate[checkHeartRateCount++] = value.getHeartRate();
@@ -195,16 +214,19 @@ implements OnRobotReadyListener {
                         }
                     } else if(!isExercise && !isSleep){
                         if(value.getHeartRate()>stableHeartRateAvg*1.35 || value.getHeartRate()<stableHeartRateAvg*0.65) {
-                            if(emergencyCount >= emergencyCountMax) {
+                            if(emergencyHeartCount >= EMERGENCY_COUNT_MAX) {
                                 emergency = true;
+                                emergencyHeartCount = 0;
                                 buttonEmergency.callOnClick();
                             } else {
-                                emergencyCount+=1;
+                                emergencyHeartCount ++;
+                                Log.d("emergencyHeartCount", "카운트 : " + emergencyHeartCount);
                             }
                         } else {
-                            emergency = false;
-                            emergencyCount = 0;
+                            emergencyHeartCount = 0;
                         }
+                    } else if(isExercise || isSleep){
+                        emergencyHeartCount = 0;
                     }
                 }
             }
@@ -226,7 +248,6 @@ implements OnRobotReadyListener {
                 Log.e("analysis", error.getMessage());
             }
         });
-
         sensorRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
@@ -261,6 +282,12 @@ implements OnRobotReadyListener {
             } else if(resultCode == Activity.RESULT_CANCELED){
                 Log.d("guardians","취소되었습니다");
             }
+        } else if(requestCode == REQUEST_CODE_FOR_EMERGENCY){
+            if(resultCode != 4) {
+                emergencyEnded();
+            } else {
+                //callEmergency();
+            }
         }
     }
 
@@ -273,6 +300,60 @@ implements OnRobotReadyListener {
         editor.apply();
         Log.d("guardians", "로컬저장완료 : " + guardians.toString());
     }
+
+    private void setupEmergencyCancelButtonListener() {
+        if(emergencyCancelButtonListener == null) {
+            emergencyCancelButtonListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    if(snapshot.getValue(Boolean.class)==true){
+                        emergencyEnded();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+
+                }
+            };
+        }
+    }
+
+    /*private void setupCallStatusListener(){
+        if(callStatusListener == null) {
+            callStatusListener = new OnTelepresenceStatusChangedListener("") {
+                @Override
+                public void onTelepresenceStatusChanged(@org.jetbrains.annotations.NotNull CallState callState) {
+                    switch (callState.getState()){
+                        case ENDED:                 //전화끝났을때
+                            emergencyEnded();
+                            break;
+                        case DECLINED:              //전화거절당했을때
+                            callEmergency();
+                            break;
+                        case NOT_ANSWERED:          //전화걸고 상대방이 전화를 안받을때
+                            callEmergency();
+                            break;
+                        case BUSY:                  //전화걸려고했는데 상대방이 BUSY상태일때
+                            callEmergency();
+                            break;
+                        case STARTED:               //상대방이전화수락하고 전화가 시작했을때
+                            break;
+                        case INITIALIZED:           //전화걸고 상대방이 반응하기전까지
+                            break;
+                        case POOR_CONNECTION:       //연결이슈로 전화 안될때
+                            callEmergency();
+                            break;
+                        case CANT_JOIN:             //Cannot join the call - 전화에 합류할수 없을때?
+                            callEmergency();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            };
+        }
+    }*/
 
     private void loadGuardianList(){
         SharedPreferences sharedPreferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
@@ -294,8 +375,7 @@ implements OnRobotReadyListener {
 
     private void showNotGuardianDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("보호자 설정")
-                .setMessage("보호자가 없습니다! 보호자를 설정해주세요");
+        builder.setTitle("보호자 설정").setMessage("보호자가 없습니다! 보호자를 설정해주세요");
         builder.setPositiveButton("확인", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id){
@@ -306,7 +386,7 @@ implements OnRobotReadyListener {
         builder.show();
     }
 
-
+/*
     @Override
     public void onStart() {
         super.onStart();
@@ -317,16 +397,83 @@ implements OnRobotReadyListener {
     public void onStop() {
         super.onStop();
         robot.removeOnRobotReadyListener(this);
+        robot.removeOnBeWithMeStatusChangedListener(this);
     }
 
     @Override
     public void onRobotReady(boolean isReady){
         if(isReady){
+            robot.addOnBeWithMeStatusChangedListener(this);
             try{
                 final ActivityInfo activityInfo = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
                 robot.onStart(activityInfo);
             } catch(PackageManager.NameNotFoundException e) {
                 throw new RuntimeException(e);
+            }
+        }
+    }
+    
+    //로봇이 따라가기 상태가 변할때 실행하는 메서드
+    @Override
+    public void onBeWithMeStatusChanged(String status) {
+        switch(status) {
+            case ABORT:             //따라가기 중단됐을때
+                break;
+            case CALCULATING:       //따라가는중에 장애물을 발견해서 돌아가는길 계산중일때
+                break;
+            case SEARCH:            //따라가기모드 실행되서 사람을 찾고있을때
+                break;
+            case START:             //따라가기모드 실행되고나서 사람을 찾고 따라가기 시작했을떄
+                break;
+            case TRACK:             //따라가기중일때
+                break;
+            case OBSTACLE_DETECTED: //따라가는중 장애물 감지했을때
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void callEmergency(){
+        //보호자에게전화걸기
+        //전화가능상태를 가져와서 전화가능한사람먼저 통화
+        //전화거는거는 테미앱, 테미센터(데스크탑)두가지가 존재
+        List<MemberStatusModel> statusList = robot.getMembersStatus();
+        statusMap.clear();
+        for(MemberStatusModel status : statusList){
+            statusMap.put(status.getMemberId(), status);
+        }
+        if(guardians.size() == calledGuardians.size()) {
+            calledGuardians.clear();
+        }
+        robot.addOnTelepresenceStatusChangedListener(callStatusListener);
+        for(UserInfo guardian : guardians) {
+            MemberStatusModel status = statusMap.get(guardian.getUserId());
+            if(status.getMobileStatus()==0 && !calledGuardians.contains(guardian)){
+                robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.MOBILE);
+                calledGuardians.add(guardian);
+                break;
+            } else if(status.getCenterStatus() == 0 && !calledGuardians.contains(guardian)){
+                robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.TEMI_CENTER);
+                calledGuardians.add(guardian);
+                break;
+            }
+        }
+    }*/
+
+    private void emergencyEnded() {
+        if(emergency){
+            emergency = false;
+            calledGuardians.clear();
+            //statusMap.clear();
+            emergencyRef.setValue(false);
+            emergencyCancelRef.setValue(false);
+            emergencyCancelRef.removeEventListener(emergencyCancelButtonListener);
+            //robot.removeOnTelepresenceStatusChangedListener(callStatusListener);
+            emergencyHeartCount=0;
+            EmergencyCancelActivity emergencyCancelActivity = EmergencyCancelActivity.getInstance();
+            if(emergencyCancelActivity != null){
+                emergencyCancelActivity.finish();
             }
         }
     }
