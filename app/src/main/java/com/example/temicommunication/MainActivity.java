@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity
             public void onDataChange(DataSnapshot snapshot) {
                 HeartRateData value = snapshot.getValue(HeartRateData.class);
                 Log.d("confirm", value.toString());
-                LocalDateTime checkTime = LocalDateTime.parse(value.getCheckData());
+                LocalDateTime checkTime = LocalDateTime.parse(value.getCheckDate());
                 if(heartRateCheckTime.isBefore(checkTime)){
                     if(emergency){
                         if(emergencyStartTime.plusSeconds(EMERGENCY_CANCEL_WAIT_TIME).isBefore(checkTime)){
