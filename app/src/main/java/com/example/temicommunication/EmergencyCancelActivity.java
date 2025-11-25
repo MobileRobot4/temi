@@ -21,10 +21,11 @@ public class EmergencyCancelActivity extends AppCompatActivity {
 
     Button buttonEmergencyCancel;
     TextView textViewSecond;
-    LocalDateTime emergencyStartTime;
+    long emergencyStartTime;
 
     private Handler handler = new Handler();
     private static final int INTERVAL_MS = 1000;
+    private static final long MAX_WAIT_SECONDS = 7;_
     private static EmergencyCancelActivity instance;
 
     public static EmergencyCancelActivity getInstance(){
@@ -37,16 +38,14 @@ public class EmergencyCancelActivity extends AppCompatActivity {
         setContentView(R.layout.activity_emergency_cancel);
         instance = this;
         Intent receivedIntent = getIntent();
-        emergencyStartTime = (LocalDateTime)receivedIntent.getSerializableExtra("startTime");
-        Serializable serializableTime = receivedIntent.getSerializableExtra("startTime");
-        if (serializableTime instanceof LocalDateTime) {
-            emergencyStartTime = (LocalDateTime) serializableTime;
-        } else {
-            Log.e("EmergencyCancel", "startTime Intent 데이터가 유효하지 않습니다.");
-            // 데이터가 유효하지 않으면 타이머를 시작할 수 없습니다.
-        }
-        if (emergencyStartTime != null) {
+        emergencyStartTime = receivedIntent.getLongExtra("startTime",0L);
+        if (emergencyStartTime > 0L) {
             startTimer();
+        } else {
+            Log.e("EmergencyCancel", "startTime Intent 데이터가 유효하지 않습니다. (0L)");
+            // 유효하지 않으면 즉시 종료합니다.
+            setResult(RESULT_CANCELED);
+            finish();
         }
         buttonEmergencyCancel = findViewById(R.id.buttonEmergencyCancel);
         textViewSecond = findViewById(R.id.textViewSecond);
@@ -63,18 +62,18 @@ public class EmergencyCancelActivity extends AppCompatActivity {
     private Runnable updateTimeRunnable = new Runnable() {
         @Override
         public void run() {
-            LocalDateTime checkTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
-            if (emergencyStartTime != null) {
-                Duration duration = Duration.between(emergencyStartTime, checkTime);
-                long seconds = duration.getSeconds();
-                textViewSecond.setText("[" + seconds + "초/7초]");
-                Log.d("응급상황","[" + seconds + "초/7초]");
-                if(seconds == 8){
-                    setResult(4);
-                    finish();
-                } else {
-                    handler.postDelayed(this, INTERVAL_MS);
-                }
+            long now = System.currentTimeMillis();
+            long elapsedMillis = now - emergencyStartTime;
+            long seconds = elapsedMillis / 1000;
+            textViewSecond.setText("[" + seconds + "초/" + MAX_WAIT_SECONDS + "초]");
+            Log.d("응급상황","[" + seconds + "초/" + MAX_WAIT_SECONDS + "초]");
+            if(seconds >= MAX_WAIT_SECONDS + 1){
+                // 7초까지 표시 후 8초가 되는 순간 종료
+                stopTimer();
+                setResult(4); // 응급 상황 발생 코드로 설정
+                finish();
+            } else {
+                handler.postDelayed(this, INTERVAL_MS);
             }
         }
     };

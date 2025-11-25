@@ -36,11 +36,15 @@ import com.robotemi.sdk.model.MemberStatusModel;
 import com.robotemi.sdk.telepresence.CallState;
 
 import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @SuppressLint("NewApi")
@@ -74,9 +78,9 @@ public class MainActivity extends AppCompatActivity
     boolean hideEmergengyButton = true;
     int checkHeartRateCount = 0;
     int emergencyHeartCount = 0;
-    LocalDateTime checkHeartRateStartDate;
-    LocalDateTime heartRateCheckTime;
-    LocalDateTime emergencyStartTime;
+    long checkHeartRateStartDate;
+    long heartRateCheckTime;
+    long emergencyStartTime;
     Robot robot;
     List<UserInfo> guardians = new ArrayList<>();
     List<UserInfo> calledGuardians = new ArrayList<>();
@@ -92,7 +96,7 @@ public class MainActivity extends AppCompatActivity
         setupCallStatusListener();
         emergencyCancelRef.setValue(false);
         emergencyRef.setValue(false);
-        heartRateCheckTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        heartRateCheckTime = System.currentTimeMillis();
         buttonCheckHeart = (Button)findViewById(R.id.buttonCheckHeart);
         buttonCheckHeart.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -101,7 +105,7 @@ public class MainActivity extends AppCompatActivity
                     buttonCheckHeart.setText("안정된 상태입니까?");
                 } else if(buttonCheckHeart.getText().equals("안정된 상태입니까?")){
                     checkHeartRate = true;
-                    checkHeartRateStartDate = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+                    checkHeartRateStartDate = System.currentTimeMillis();
                     buttonCheckHeart.setText("심박수측정중...[0/20]");
                 }
             }
@@ -148,7 +152,7 @@ public class MainActivity extends AppCompatActivity
                 emergency=true;
                 emergencyRef.setValue(true);
                 emergencyCancelRef.addValueEventListener(emergencyCancelButtonListener);
-                emergencyStartTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+                emergencyStartTime = System.currentTimeMillis();
                 Intent intent = new Intent(MainActivity.this,EmergencyCancelActivity.class);
                 intent.putExtra("startTime", emergencyStartTime);
                 startActivityForResult(intent,REQUEST_CODE_FOR_EMERGENCY);
@@ -180,16 +184,17 @@ public class MainActivity extends AppCompatActivity
             public void onDataChange(DataSnapshot snapshot) {
                 HeartRateData value = snapshot.getValue(HeartRateData.class);
                 Log.d("confirm", value.toString());
-                LocalDateTime checkTime = LocalDateTime.parse(value.getCheckDate());
-                if(heartRateCheckTime.isBefore(checkTime)){
+                long checkTime = convertDateStringToTimestamp(value.getCheckDate());
+                if(heartRateCheckTime < checkTime){
                     if(emergency){
-                        if(emergencyStartTime.plusSeconds(EMERGENCY_CANCEL_WAIT_TIME).isBefore(checkTime)){
+                        if(emergencyStartTime + (EMERGENCY_CANCEL_WAIT_TIME * 1000) < checkTime){
                             callEmergency();
-                            emergencyStartTime = emergencyStartTime.plusYears(1000);
+                            emergencyStartTime = emergencyStartTime + (1000L * 365 * 24 * 60 * 60 * 1000);
                         }
                     }
                     if(checkHeartRate){
-                        if(checkHeartRateStartDate.isBefore(LocalDateTime.parse(value.getHeartDate()))){
+                        long heartDateTimestamp = convertDateStringToTimestamp(value.getHeartDate());
+                        if(checkHeartRateStartDate < heartDateTimestamp){
                             stableHeartRate[checkHeartRateCount++] = value.getHeartRate();
                             if(checkHeartRateCount == 21){
                                 checkHeartRate = false;
@@ -475,6 +480,30 @@ public class MainActivity extends AppCompatActivity
             if(emergencyCancelActivity != null){
                 emergencyCancelActivity.finish();
             }
+        }
+    }
+
+    private long convertDateStringToTimestamp(String dateString) {
+        // 1. 문자열을 밀리초까지만 남도록 전처리 (마이크로초 제거)
+        int dotIndex = dateString.indexOf('.');
+
+        // 마침표가 있고, 그 뒤에 최소 3자리(밀리초) 이상의 데이터가 있는 경우
+        if (dotIndex > 0 && dateString.length() > dotIndex + 3) {
+            // 밀리초 3자리만 남기고 뒤의 마이크로초를 잘라냅니다. (dotIndex + 4 = 마침표 + 3자리)
+            dateString = dateString.substring(0, dotIndex + 4);
+        }
+        // 만약 포맷이 이상하거나 마침표가 없다면 파싱은 어차피 실패할 수 있으나, 일단 시도는 진행합니다.
+
+        // 2. 파싱 패턴: "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        // 이 패턴은 자른 문자열(예: "2025-11-25T18:23:59.385")과 일치합니다.
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault());
+
+        try {
+            Date date = sdf.parse(dateString);
+            return date != null ? date.getTime() : 0L;
+        } catch (ParseException e) {
+            Log.e("DateConvert", "최종 파싱 실패: " + dateString, e);
+            return 0L;
         }
     }
 }
