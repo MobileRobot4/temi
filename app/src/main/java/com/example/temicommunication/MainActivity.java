@@ -55,16 +55,31 @@ public class MainActivity extends AppCompatActivity {
     private Robot robot;                                    //lee
     private TextView distanceText2Lee;                      //lee
     // ==========================
+    //추가
+    private com.example.temicommunication.PoseOverlay poseOverlayLee;  //lee
+    private TextView movedCountLee;                                    //lee
+    private boolean isFrontFacingLee = true; //lee
+
+    // startCamera() – 전/후면 선택 유지
+    CameraSelector selector = new CameraSelector.Builder()
+            .requireLensFacing(isFrontFacingLee ?
+                    CameraSelector.LENS_FACING_FRONT : CameraSelector.LENS_FACING_BACK) //lee
+            .build();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        poseOverlayLee= findViewById(R.id.poseOverlayLee);
+        movedCountLee= findViewById(R.id.movedCountLee);    //lee
         SwitchCompat switchCompat = (SwitchCompat) findViewById(R.id.switchLed);
         TextView distanceText = (TextView)findViewById(R.id.textDistance);
         Button buttonDistance = (Button)findViewById(R.id.buttonDistance);
         TextView distanceText2 = (TextView)findViewById(R.id.textDistance2);
+
+        poseOverlayLee.setFlipY(true);   // ★ 상하 반전 켜기  //lee++
+        poseOverlayLee.setMirror(false); // 안전하게 mirror 끔  //lee++
 
         // ===== 추가: 카메라 프리뷰/Temi/포즈 초기화 =====
         previewView = findViewById(R.id.viewFinder);        //lee
@@ -135,26 +150,37 @@ public class MainActivity extends AppCompatActivity {
     }                                                                         //lee
     // ===================================
 
-    // ===== 추가: 프레임 분석 + 낙상 판단 =====
-    private void analyze(ImageProxy imageProxy) {                              //lee
-        if (imageProxy.getImage() == null) { imageProxy.close(); return; }     //lee
-        InputImage input = InputImage.fromMediaImage(                          //lee
-                imageProxy.getImage(), imageProxy.getImageInfo().getRotationDegrees()); //lee
+    // analyze()
+    private void analyze(ImageProxy imageProxy) {  //lee
+        if (imageProxy.getImage() == null) { imageProxy.close(); return; } //lee
+        int rot = imageProxy.getImageInfo().getRotationDegrees();          //lee
+        int srcW = imageProxy.getWidth();                                   //lee
+        int srcH = imageProxy.getHeight();                                  //lee
 
-        poseDetector.process(input)                                            //lee
-                .addOnSuccessListener((Pose pose) -> {                         //lee
-                    long now = System.currentTimeMillis();                     //lee
-                    if (moveDetection.updateAndCheck(pose, now)) {             //lee
-                        robot.speak(TtsRequest.create(                         //lee
-                                "경고: 넘어짐이 감지되었습니다. 도움이 필요하신가요?", true)); //lee
-                        runOnUiThread(() -> distanceText2Lee.setText("FALL DETECTED"));   //lee
-                    }                                                          //lee
-                    imageProxy.close();                                        //lee
-                })                                                             //lee
-                .addOnFailureListener(e -> {                                   //lee
-                    Log.e("Pose", "process fail", e);                          //lee
-                    imageProxy.close();                                        //lee
-                });                                                            //lee
-    }                                                                           //lee
+        InputImage input = InputImage.fromMediaImage(
+                imageProxy.getImage(), rot);                                //lee
+
+        poseDetector.process(input)
+                .addOnSuccessListener((Pose pose) -> {
+                    long now = System.currentTimeMillis();                  //lee
+                    boolean hit = moveDetection.updateAndCheck(pose, now);  //lee
+                    int moved = moveDetection.getLastMovedCount();          //lee
+
+                    // 오버레이 업데이트
+                    poseOverlayLee.setPose(pose, srcW, srcH, rot);  // OK
+
+                    // 카운트/알림 표시
+                    runOnUiThread(() -> {                                   //lee
+                        movedCountLee.setText("moved: " + moved + "/9");     //lee
+                        if (hit) {
+                            robot.speak(TtsRequest.create(
+                                    "경고: 넘어짐이 감지되었습니다. 도움이 필요하신가요?", true)); //lee
+                            distanceText2Lee.setText("FALL DETECTED");       //lee
+                        }
+                    });                                                      //lee
+                    imageProxy.close();                                      //lee
+                })
+                .addOnFailureListener(e -> { imageProxy.close(); });         //lee
+    }                                                                    //lee
     // ========================================
 }

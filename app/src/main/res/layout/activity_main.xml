@@ -10,10 +10,39 @@
         android:id="@+id/viewFinder"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        app:implementationMode="performance"
+        app:scaleType="fillCenter"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 포즈 오버레이 (프리뷰 위에 그림) -->
+    <com.example.temicommunication.PoseOverlay
+        android:id="@+id/poseOverlayLee"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:elevation="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 이동 관절 개수 표시 -->
+    <TextView
+        android:id="@+id/movedCountLee"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="moved: 0/9"
+        android:textSize="16sp"
+        android:textColor="@android:color/white"
+        android:background="#66000000"
+        android:padding="8dp"
+        android:elevation="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"/>
 
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/switchLed"
