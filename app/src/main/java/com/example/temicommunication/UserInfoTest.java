@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserInfo implements Parcelable { // 🟢 1. Parcelable 상속
+public class UserInfoTest implements Parcelable { // 🟢 1. Parcelable 상속
 
     // Lombok이 getter/setter, equals, hashCode 등을 자동으로 생성합니다.
     String UserId;
@@ -18,7 +18,7 @@ public class UserInfo implements Parcelable { // 🟢 1. Parcelable 상속
     int role;
 
     // 🟢 2. Parcelable 구현을 위한 보조 생성자 (시스템에서 사용)
-    protected UserInfo(Parcel in) {
+    protected UserInfoTest(Parcel in) {
         UserId = in.readString();
         name = in.readString();
         picUrl = in.readString();
@@ -26,15 +26,15 @@ public class UserInfo implements Parcelable { // 🟢 1. Parcelable 상속
     }
 
     // 🟢 3. CREATOR 필드 정의 (필수)
-    public static final Parcelable.Creator<UserInfo> CREATOR = new Parcelable.Creator<UserInfo>() {
+    public static final Parcelable.Creator<UserInfoTest> CREATOR = new Parcelable.Creator<UserInfoTest>() {
         @Override
-        public UserInfo createFromParcel(Parcel in) {
-            return new UserInfo(in); // 위에서 정의한 보조 생성자 호출
+        public UserInfoTest createFromParcel(Parcel in) {
+            return new UserInfoTest(in); // 위에서 정의한 보조 생성자 호출
         }
 
         @Override
-        public UserInfo[] newArray(int size) {
-            return new UserInfo[size];
+        public UserInfoTest[] newArray(int size) {
+            return new UserInfoTest[size];
         }
     };
 

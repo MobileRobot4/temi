@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-//import com.robotemi.sdk.UserInfo;
+import com.robotemi.sdk.UserInfo;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -25,7 +25,7 @@ import com.google.firebase.database.annotations.NotNull;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-/*import com.robotemi.sdk.Robot;
+import com.robotemi.sdk.Robot;
 import com.robotemi.sdk.TtsRequest;
 import com.robotemi.sdk.UserInfo;
 import com.robotemi.sdk.constants.Platform;
@@ -33,7 +33,7 @@ import com.robotemi.sdk.listeners.OnBeWithMeStatusChangedListener;
 import com.robotemi.sdk.listeners.OnRobotReadyListener;
 import com.robotemi.sdk.listeners.OnTelepresenceStatusChangedListener;
 import com.robotemi.sdk.model.MemberStatusModel;
-import com.robotemi.sdk.telepresence.CallState;*/
+import com.robotemi.sdk.telepresence.CallState;
 
 import java.lang.reflect.Type;
 import java.time.LocalDateTime;
@@ -45,10 +45,10 @@ import java.util.Map;
 
 @SuppressLint("NewApi")
 public class MainActivity extends AppCompatActivity
-        /*implements OnRobotReadyListener, OnBeWithMeStatusChangedListener*/ {
+        implements OnRobotReadyListener, OnBeWithMeStatusChangedListener {
 
     private ValueEventListener emergencyCancelButtonListener;
-    //private OnTelepresenceStatusChangedListener callStatusListener;
+    private OnTelepresenceStatusChangedListener callStatusListener;
     private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
     private static final int REQUEST_CODE_FOR_EMERGENCY = 1002;
     private static final int EMERGENCY_COUNT_MAX = 2; //파이어베이스주기가 약5초로확인됨 실제 초수는 곱하기5해줘야됨
@@ -77,19 +77,19 @@ public class MainActivity extends AppCompatActivity
     LocalDateTime checkHeartRateStartDate;
     LocalDateTime heartRateCheckTime;
     LocalDateTime emergencyStartTime;
-    //Robot robot;
+    Robot robot;
     List<UserInfo> guardians = new ArrayList<>();
     List<UserInfo> calledGuardians = new ArrayList<>();
-    //Map<String, MemberStatusModel> statusMap = new HashMap<>();
+    Map<String, MemberStatusModel> statusMap = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //robot = Robot.getInstance();
+        robot = Robot.getInstance();
         loadGuardianList();
         setupEmergencyCancelButtonListener();
-        //setupCallStatusListener();
+        setupCallStatusListener();
         emergencyCancelRef.setValue(false);
         emergencyRef.setValue(false);
         heartRateCheckTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
@@ -142,8 +142,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 //여기에 응급상황(의심)발생시의 로직 생성
-                /*TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요",false);
-                robot.speak(ttsRequest);*/
+                TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요",false);
+                robot.speak(ttsRequest);
                 emergencyCancelRef.setValue(false);
                 emergency=true;
                 emergencyRef.setValue(true);
@@ -158,19 +158,19 @@ public class MainActivity extends AppCompatActivity
         buttonSetGuardian.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(guardians.size() == 0) {
-                    guardians.add(new UserInfo("test_user_1","테스트1","https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/3c7d47258ab81fa7b96b7350be84d1bc/2e2f07cd-cce1-4ed4-9fbd-7b2266963dba.jpeg",0));
-                }
+//                if(guardians.size() == 0) {
+//                    guardians.add(new UserInfo("test_user_1","테스트1","https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/3c7d47258ab81fa7b96b7350be84d1bc/2e2f07cd-cce1-4ed4-9fbd-7b2266963dba.jpeg",0));
+//                }
                 Intent intent = new Intent (MainActivity.this,GuardianActivity.class);
                 ArrayList<UserInfo> guardianList = new ArrayList<>(guardians);
                 intent.putParcelableArrayListExtra("guardians",guardianList);
-                ArrayList<UserInfo> users = new ArrayList<>(/*robot.getAllContact()*/);
-                if(users.size() == 0) {
-                    users.add(guardians.get(0));
-                    for(int i = 0; i<20 ; i++) {
-                        users.add(new UserInfo("test_user_" + i,"테스트" + i,"https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/f90924b852d82738de251e10956cd2ba/c7183245-e8d6-4d47-ac1b-30563c02907c.jpeg",2));
-                    }
-                }
+                ArrayList<UserInfo> users = new ArrayList<>(robot.getAllContact());
+//                if(users.size() == 0) {
+//                    users.add(guardians.get(0));
+//                    for(int i = 0; i<20 ; i++) {
+//                        users.add(new UserInfo("test_user_" + i,"테스트" + i,"https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/f90924b852d82738de251e10956cd2ba/c7183245-e8d6-4d47-ac1b-30563c02907c.jpeg",2));
+//                    }
+//                }
                 intent.putParcelableArrayListExtra("users",users);
                 startActivityForResult(intent, REQUEST_CODE_FOR_GUARDIAN);
             }
@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity
                 if(heartRateCheckTime.isBefore(checkTime)){
                     if(emergency){
                         if(emergencyStartTime.plusSeconds(EMERGENCY_CANCEL_WAIT_TIME).isBefore(checkTime)){
-                            //callEmergency();
+                            callEmergency();
                             emergencyStartTime = emergencyStartTime.plusYears(1000);
                         }
                     }
@@ -286,7 +286,7 @@ public class MainActivity extends AppCompatActivity
             if(resultCode != 4) {
                 emergencyEnded();
             } else {
-                //callEmergency();
+                callEmergency();
             }
         }
     }
@@ -319,7 +319,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /*private void setupCallStatusListener(){
+    private void setupCallStatusListener(){
         if(callStatusListener == null) {
             callStatusListener = new OnTelepresenceStatusChangedListener("") {
                 @Override
@@ -353,7 +353,7 @@ public class MainActivity extends AppCompatActivity
                 }
             };
         }
-    }*/
+    }
 
     private void loadGuardianList(){
         SharedPreferences sharedPreferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
@@ -386,7 +386,7 @@ public class MainActivity extends AppCompatActivity
         builder.show();
     }
 
-/*
+
     @Override
     public void onStart() {
         super.onStart();
@@ -459,17 +459,17 @@ public class MainActivity extends AppCompatActivity
                 break;
             }
         }
-    }*/
+    }
 
     private void emergencyEnded() {
         if(emergency){
             emergency = false;
             calledGuardians.clear();
-            //statusMap.clear();
+            statusMap.clear();
             emergencyRef.setValue(false);
             emergencyCancelRef.setValue(false);
             emergencyCancelRef.removeEventListener(emergencyCancelButtonListener);
-            //robot.removeOnTelepresenceStatusChangedListener(callStatusListener);
+            robot.removeOnTelepresenceStatusChangedListener(callStatusListener);
             emergencyHeartCount=0;
             EmergencyCancelActivity emergencyCancelActivity = EmergencyCancelActivity.getInstance();
             if(emergencyCancelActivity != null){
