@@ -5,6 +5,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +30,8 @@ import com.google.firebase.database.annotations.NotNull;
 import com.robotemi.sdk.Robot;
 import com.robotemi.sdk.listeners.OnRobotReadyListener;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import lombok.NonNull;
 
 public class
@@ -39,9 +43,13 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
     private EmergencyNotifier emergencyNotifier;
     private ContactToGuardian contactToGuardian;
     private Robot robot;
+    private final AtomicBoolean calling = new AtomicBoolean(false);
+
+    private boolean robotInitialized = false;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference myRef = firebaseDatabase.getReference();
+    ValueEventListener valueEventListener;
 
     @SuppressLint("CheckResult")
     @Override
@@ -81,13 +89,20 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
             System.out.println("temi가 아직 준비되지 않았습니다.");
             return;
         }
+
+        if (robotInitialized) return;
+        robotInitialized = true;
+
         // 알림 객체 생성
         String temiId = robot.getSerialNumber();
 
         if (temiId == null) {
 //            throw new IllegalArgumentException("temi가 준비되지 않았습니다.");
             System.out.println("temi가 준비되지 않았습니다.");
+            return;
         }
+
+        System.out.println("temi 준비 완료. serial=" + temiId);
         emergencyNotifier = new EmergencyNotifier(this, temiId);
         contactToGuardian = new ContactToGuardian(this);
 
@@ -117,11 +132,30 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
 //                            "살려주세요 인식됨! Firebase로 긴급신호 전송",
 //                            Toast.LENGTH_SHORT
 //                    ).show();
+                    // 이미 처리 중이면 무시 (연속 콜백 방지)
+                    if (!calling.compareAndSet(false, true)) return;
+
                     System.out.println("살려주세요 인식됨");
                     emergencyNotifier.sendVoiceHelp();
                     contactToGuardian.callGuardian("강하나");
+
+                    // 10초 후 다시 허용
+                    new Handler(Looper.getMainLooper())
+                            .postDelayed(() -> calling.set(false), 10_000);
                 })
         );
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (voiceDetector != null) voiceDetector.start();
+    }
+
+    @Override
+    protected void onPause() {
+        if (voiceDetector != null) voiceDetector.stop();
+        super.onPause();
     }
 
 
@@ -132,6 +166,16 @@ MainActivity extends AppCompatActivity implements OnRobotReadyListener {
             voiceDetector.release();
             voiceDetector = null;
         }
+
+        if (robot != null) {
+            robot.removeOnRobotReadyListener(this);
+        }
+
+        if (myRef != null && valueEventListener != null) {
+            myRef.removeEventListener(valueEventListener);
+        }
+
+        super.onDestroy();
     }
 
     @Override

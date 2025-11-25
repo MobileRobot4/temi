@@ -25,6 +25,7 @@ public class ContactToGuardian {
         if (guardian == null) {
 //            Toast.makeText(this.context, "보호자 정보를 찾지 못했습니다.", Toast.LENGTH_LONG).show();
             System.out.println("보호자 정보를 찾지 못했습니다.");
+            return;
         }
 
         temi.startTelepresence(
@@ -36,6 +37,10 @@ public class ContactToGuardian {
 
     private UserInfo findGuardian(String userName, Robot temi) {
         List<UserInfo> contacts = temi.getAllContact();
+        if (contacts == null) {
+            System.out.println("Temi 연락처가 비어 있습니다.");
+            return null;
+        }
 
         for (UserInfo user : contacts) {
             if (user.getName().equals(userName)) {

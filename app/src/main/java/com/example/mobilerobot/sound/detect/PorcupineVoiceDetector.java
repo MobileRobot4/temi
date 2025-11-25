@@ -60,6 +60,7 @@ public class PorcupineVoiceDetector {
                     .setAccessKey(accessKey)
                     .setKeywordPaths(keywordPaths)
                     .setModelPath(modelPath)
+                    .setSensitivities(new float[]{0.8f, 0.7f})
                     .build(context, callback);
 
             System.out.println("PorcupineManager 생성 완료");
@@ -134,7 +135,7 @@ public class PorcupineVoiceDetector {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IOException("Copied file is empty: " + outFile.getAbsolutePath());
         }
         return outFile.getAbsolutePath();
     }
