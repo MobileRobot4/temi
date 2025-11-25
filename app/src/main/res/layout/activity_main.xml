@@ -1,62 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:orientation="vertical"
+    android:padding="24dp">
 
     <Button
-        android:id="@+id/buttonSetGuardian"
-        android:layout_width="wrap_content"
+        android:id="@+id/btnStart"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="보호자설정"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.726" />
+        android:text="열화상 사람 감지 시작" />
 
     <Button
-        android:id="@+id/buttonSleep"
+        android:id="@+id/btnStop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="정지"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/tvStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="취침시작"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.499"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.446" />
+        android:text="대기 중"
+        android:layout_marginTop="16dp" />
 
-    <Button
-        android:id="@+id/buttonCheckHeart"
+    <TextView
+        android:id="@+id/tvTemp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="심박수측정하기(약20초)"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.175" />
+        android:text="maxTemp: -" />
 
-    <Button
-        android:id="@+id/buttonExercise"
+    <TextView
+        android:id="@+id/tvRatio"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="운동시작"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.311" />
+        android:text="hotRatio: -" />
 
-    <Button
-        android:id="@+id/buttonEmergency"
+    <TextView
+        android:id="@+id/tvIsHuman"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="긴급상황"
-        tools:layout_editor_absoluteX="595dp"
-        tools:layout_editor_absoluteY="464dp" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:text="사람 판별 결과: -" />
+</LinearLayout>

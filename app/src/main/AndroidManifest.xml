@@ -2,27 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.temicommunication">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 나중에 블루투스 / USB 시리얼 쓸 거면 여기 권한 추가 -->
+
     <application
+        android:name=".MyApp"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.TemiCommunication.NoActionBar">
-        <activity android:name=".MainActivity" android:exported="true">
-        <intent-filter>
+        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+
+        <activity
+            android:name="com.example.temicommunication.MainActivity"
+            android:exported="true">
+            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GuardianActivity" android:exported="false">
-        </activity>
-        <activity android:name=".EmergencyCancelActivity" android:exported="false">
-        </activity>
-        <meta-data
-            android:name="com.robotemi.sdk.metadata.SKILL"
-            android:value="testfirebase"/>
+
     </application>
 
-    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
