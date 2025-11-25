@@ -26,7 +26,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-        coreLibraryDesugaringEnabled true
     }
 }
 
@@ -50,8 +49,6 @@ dependencies {
     //lombok
     compileOnly 'org.projectlombok:lombok:1.18.16'
     annotationProcessor 'org.projectlombok:lombok:1.18.16'
-    //날짜관련
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     //이미지삽입
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'

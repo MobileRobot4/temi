@@ -38,8 +38,6 @@ import com.robotemi.sdk.telepresence.CallState;
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,7 +45,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@SuppressLint("NewApi")
 public class MainActivity extends AppCompatActivity
         implements OnRobotReadyListener, OnBeWithMeStatusChangedListener {
 
@@ -76,6 +73,7 @@ public class MainActivity extends AppCompatActivity
     boolean isSleep = false;
     boolean emergency = false;
     boolean hideEmergengyButton = true;
+    boolean calling = false;
     int checkHeartRateCount = 0;
     int emergencyHeartCount = 0;
     long checkHeartRateStartDate;
@@ -186,10 +184,13 @@ public class MainActivity extends AppCompatActivity
                 Log.d("confirm", value.toString());
                 long checkTime = convertDateStringToTimestamp(value.getCheckDate());
                 if(heartRateCheckTime < checkTime){
+                    //1초마다 확인할려고
                     if(emergency){
                         if(emergencyStartTime + (EMERGENCY_CANCEL_WAIT_TIME * 1000) < checkTime){
-                            callEmergency();
-                            emergencyStartTime = emergencyStartTime + (1000L * 365 * 24 * 60 * 60 * 1000);
+                            if(!calling) {
+                                callEmergency();
+                                emergencyStartTime = emergencyStartTime + (1000L * 365 * 24 * 60 * 60 * 1000);
+                            }
                         }
                     }
                     if(checkHeartRate){
@@ -215,17 +216,19 @@ public class MainActivity extends AppCompatActivity
                                 buttonCheckHeart.setText("심박수측정중...[" + checkHeartRateCount + "/20]");
                             }
                         } else {
-                            Log.d("checkHeartRate","심박수데이터 최신화 안됨 : " + LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+                            Log.d("checkHeartRate","심박수데이터 최신화 안됨 ");
                         }
                     } else if(!isExercise && !isSleep){
                         if(value.getHeartRate()>stableHeartRateAvg*1.35 || value.getHeartRate()<stableHeartRateAvg*0.65) {
-                            if(emergencyHeartCount >= EMERGENCY_COUNT_MAX) {
-                                emergency = true;
-                                emergencyHeartCount = 0;
-                                buttonEmergency.callOnClick();
-                            } else {
-                                emergencyHeartCount ++;
-                                Log.d("emergencyHeartCount", "카운트 : " + emergencyHeartCount);
+                            if(!calling){
+                                if(emergencyHeartCount >= EMERGENCY_COUNT_MAX) {
+                                    emergency = true;
+                                    emergencyHeartCount = 0;
+                                    buttonEmergency.callOnClick();
+                                } else {
+                                    emergencyHeartCount ++;
+                                    Log.d("emergencyHeartCount", "카운트 : " + emergencyHeartCount);
+                                }
                             }
                         } else {
                             emergencyHeartCount = 0;
@@ -331,15 +334,19 @@ public class MainActivity extends AppCompatActivity
                 public void onTelepresenceStatusChanged(@org.jetbrains.annotations.NotNull CallState callState) {
                     switch (callState.getState()){
                         case ENDED:                 //전화끝났을때
+                            calling = false;
                             emergencyEnded();
                             break;
                         case DECLINED:              //전화거절당했을때
+                            calling = false;
                             callEmergency();
                             break;
                         case NOT_ANSWERED:          //전화걸고 상대방이 전화를 안받을때
+                            calling = false;
                             callEmergency();
                             break;
                         case BUSY:                  //전화걸려고했는데 상대방이 BUSY상태일때
+                            calling = false;
                             callEmergency();
                             break;
                         case STARTED:               //상대방이전화수락하고 전화가 시작했을때
@@ -347,9 +354,11 @@ public class MainActivity extends AppCompatActivity
                         case INITIALIZED:           //전화걸고 상대방이 반응하기전까지
                             break;
                         case POOR_CONNECTION:       //연결이슈로 전화 안될때
+                            calling = false;
                             callEmergency();
                             break;
                         case CANT_JOIN:             //Cannot join the call - 전화에 합류할수 없을때?
+                            calling = false;
                             callEmergency();
                             break;
                         default:
@@ -455,6 +464,7 @@ public class MainActivity extends AppCompatActivity
         for(UserInfo guardian : guardians) {
             MemberStatusModel status = statusMap.get(guardian.getUserId());
             if(status.getMobileStatus()==0 && !calledGuardians.contains(guardian)){
+                calling = true;
                 robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.MOBILE);
                 calledGuardians.add(guardian);
                 break;

@@ -11,12 +11,6 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.io.Serializable;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-
-@SuppressLint("NewApi")
 public class EmergencyCancelActivity extends AppCompatActivity {
 
     Button buttonEmergencyCancel;
@@ -25,7 +19,7 @@ public class EmergencyCancelActivity extends AppCompatActivity {
 
     private Handler handler = new Handler();
     private static final int INTERVAL_MS = 1000;
-    private static final long MAX_WAIT_SECONDS = 7;_
+    private static final long MAX_WAIT_SECONDS = 7;
     private static EmergencyCancelActivity instance;
 
     public static EmergencyCancelActivity getInstance(){
