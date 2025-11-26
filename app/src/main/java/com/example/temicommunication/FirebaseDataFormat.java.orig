@@ -1,4 +1,4 @@
-package com.example.mobilerobot;
+package com.example.temicommunication.mobilerobot;
 
 import lombok.Getter;
 import lombok.ToString;
