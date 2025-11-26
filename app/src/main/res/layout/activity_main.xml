@@ -6,55 +6,57 @@
     android:layout_height="match_parent"
     tools:context="com.example.mobilerobot.MainActivity">
 
-    <androidx.appcompat.widget.SwitchCompat
-        android:id="@+id/switchLed"
+    <Button
+        android:id="@+id/buttonSetGuardian"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:scaleX="2"
-        android:scaleY="2"
-        android:text="LED"
-        app:layout_constraintBottom_toTopOf="@+id/textDistance"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.457"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.101" />
-
-    <TextView
-        android:id="@+id/textDistance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
+        android:text="보호자설정"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:text="Distance:"
-        android:textColor="@color/black"
-        android:textSize="32sp"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.726" />
 
     <Button
-        android:id="@+id/buttonDistance"
+        android:id="@+id/buttonSleep"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Get Data"
+        android:text="취침시작"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.499"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.446" />
+
+    <Button
+        android:id="@+id/buttonCheckHeart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="심박수측정하기(약20초)"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.894" />
+        app:layout_constraintVertical_bias="0.175" />
 
-    <TextView
-        android:id="@+id/textDistance2"
+    <Button
+        android:id="@+id/buttonExercise"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="test"
-        android:textColor="@color/black"
-        android:textSize="32sp"
+        android:text="운동시작"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textDistance"
-        app:layout_constraintVertical_bias="0.943" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.311" />
+
+    <Button
+        android:id="@+id/buttonEmergency"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="긴급상황"
+        tools:layout_editor_absoluteX="595dp"
+        tools:layout_editor_absoluteY="464dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
