@@ -1,7 +1,7 @@
 package com.example.temicommunication;
 
 
-import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,8 +16,17 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -27,6 +36,11 @@ import com.google.firebase.database.annotations.NotNull;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.pose.Pose;
+import com.google.mlkit.vision.pose.PoseDetection;
+import com.google.mlkit.vision.pose.PoseDetector;
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions;
 import com.robotemi.sdk.Robot;
 import com.robotemi.sdk.TtsRequest;
 import com.robotemi.sdk.UserInfo;
@@ -46,19 +60,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Executors;
+
+import lombok.NonNull;
 
 public class MainActivity extends AppCompatActivity
         implements OnRobotReadyListener, OnBeWithMeStatusChangedListener {
 
     private ValueEventListener emergencyCancelButtonListener;
     private OnTelepresenceStatusChangedListener callStatusListener;
+    private PoseOverlay poseOverlay;
+    private final MoveDetection moveDetection = new MoveDetection();
     private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
     private static final int REQUEST_CODE_FOR_EMERGENCY = 1002;
+    private static final int REQUEST_CODE_FOR_CAMERA = 1003;
     private static final int EMERGENCY_COUNT_MAX = 2; //파이어베이스주기가 약5초로확인됨 실제 초수는 곱하기5해줘야됨
     private static final int NORMAL_COLOR = Color.parseColor("#E8F5E9");
     private static final int WARNING_COLOR = Color.parseColor("#FFF3E0");
     private static final int DANGER_COLOR = Color.parseColor("#B71C1C");
-    private static final long EMERGENCY_CANCEL_WAIT_TIME = 8;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
@@ -71,7 +90,10 @@ public class MainActivity extends AppCompatActivity
     Button buttonSleep;
     Button buttonEmergency;
     Button buttonSetGuardian;
+    Button buttonCamera;
     ConstraintLayout viewMain;
+    PreviewView previewView;
+    PoseDetector poseDetector;
     float[] stableHeartRate = new float[20];
     float stableHeartRateAvg = 100;
     boolean checkHeartRate = false;
@@ -80,6 +102,8 @@ public class MainActivity extends AppCompatActivity
     boolean emergency = false;
     boolean hideEmergengyButton = true;
     boolean calling = false;
+    boolean isFrontFacing = true;
+    boolean cameraDebug = false;
     int checkHeartRateCount = 0;
     int emergencyHeartCount = 0;
     long checkHeartRateStartDate;
@@ -89,6 +113,10 @@ public class MainActivity extends AppCompatActivity
     List<UserInfo> guardians = new ArrayList<>();
     List<UserInfo> calledGuardians = new ArrayList<>();
     Map<String, MemberStatusModel> statusMap = new HashMap<>();
+    CameraSelector selector = new CameraSelector.Builder()
+            .requireLensFacing(isFrontFacing ?
+                    CameraSelector.LENS_FACING_FRONT : CameraSelector.LENS_FACING_BACK)
+            .build();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +128,30 @@ public class MainActivity extends AppCompatActivity
         setupCallStatusListener();
         viewMain = findViewById(R.id.viewMain);
         viewMain.setBackgroundColor(NORMAL_COLOR);
+        poseOverlay = findViewById(R.id.poseOverlay);
+        poseOverlay.setFlipY(true);
+        poseOverlay.setMirror(false);
+        poseOverlay.setVisibility(View.GONE);
+        previewView = findViewById(R.id.viewFinder);
+        previewView.setVisibility(View.GONE);
+        poseDetector = PoseDetection.getClient(new PoseDetectorOptions.Builder()
+                                                .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
+                                                .build());
+        buttonCamera = findViewById(R.id.buttonCameraDebug);
+        buttonCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(cameraDebug){
+                    previewView.setVisibility(View.GONE);
+                    poseOverlay.setVisibility(View.GONE);
+                    cameraDebug = false;
+                } else {
+                    previewView.setVisibility(View.VISIBLE);
+                    poseOverlay.setVisibility(View.VISIBLE);
+                    cameraDebug = true;
+                }
+            }
+        });
         emergencyCancelRef.setValue(false);
         emergencyRef.setValue(false);
         heartRateCheckTime = System.currentTimeMillis();
@@ -165,7 +217,7 @@ public class MainActivity extends AppCompatActivity
                 startActivityForResult(intent,REQUEST_CODE_FOR_EMERGENCY);
             }
         });
-        buttonSetGuardian = findViewById(R.id.buttonSetGuardian);
+        buttonSetGuardian = findViewById(R.id.buttonClose);
         buttonSetGuardian.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -314,6 +366,61 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == REQUEST_CODE_FOR_CAMERA){
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                startCamera();
+            }
+        }
+    }
+
+    private void startCamera(){
+        Log.d("디버그", "카메라시작");
+        ListenableFuture<ProcessCameraProvider> future = ProcessCameraProvider.getInstance(this);
+        future.addListener(() -> {
+            try{
+                ProcessCameraProvider provider = future.get();
+                Preview preview = new Preview.Builder().build();
+                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+                ImageAnalysis analysis = new ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build();
+                analysis.setAnalyzer(Executors.newSingleThreadExecutor(), this::analyze);
+                CameraSelector selector = new CameraSelector.Builder()
+                        .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                        .build();
+                provider.unbindAll();
+                provider.bindToLifecycle(this, selector, preview, analysis);
+            } catch (Exception e){
+                Log.e("디버그", "카메라오류 : " + e.getMessage());
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void analyze(ImageProxy imageProxy){
+        if(imageProxy.getImage() == null){
+            imageProxy.close();
+            return;
+        }
+        int rot = imageProxy.getImageInfo().getRotationDegrees();
+        int srcW = imageProxy.getWidth();
+        int srcH = imageProxy.getHeight();
+        InputImage input = InputImage.fromMediaImage(imageProxy.getImage(), rot);
+        poseDetector.process(input)
+                .addOnSuccessListener((Pose pose) -> {
+                    long now = System.currentTimeMillis();
+                    boolean hit = moveDetection.updateAndCheck(pose, now);
+                    int moved = moveDetection.getLastMovedCount();
+                    poseOverlay.setPose(pose, srcW, srcH, rot);
+                    if(hit){
+                        Log.d("디버그", "넘어짐감지됨");
+                    }
+                    imageProxy.close();
+                }).addOnFailureListener(e -> {imageProxy.close();});
+    }
+
     private void saveGuardianList() {
         Gson gson = new Gson();
         String json = gson.toJson(guardians);
@@ -432,6 +539,11 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onRobotReady(boolean isReady){
         if(isReady){
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
+                ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.CAMERA},REQUEST_CODE_FOR_CAMERA);
+            } else {
+                startCamera();
+            }
             robot.addOnBeWithMeStatusChangedListener(this);
             try{
                 final ActivityInfo activityInfo = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
