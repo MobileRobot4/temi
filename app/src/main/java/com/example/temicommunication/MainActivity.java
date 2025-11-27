@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -15,6 +16,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -53,6 +55,9 @@ public class MainActivity extends AppCompatActivity
     private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
     private static final int REQUEST_CODE_FOR_EMERGENCY = 1002;
     private static final int EMERGENCY_COUNT_MAX = 2; //파이어베이스주기가 약5초로확인됨 실제 초수는 곱하기5해줘야됨
+    private static final int NORMAL_COLOR = Color.parseColor("#E8F5E9");
+    private static final int WARNING_COLOR = Color.parseColor("#FFF3E0");
+    private static final int DANGER_COLOR = Color.parseColor("#B71C1C");
     private static final long EMERGENCY_CANCEL_WAIT_TIME = 8;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
@@ -66,6 +71,7 @@ public class MainActivity extends AppCompatActivity
     Button buttonSleep;
     Button buttonEmergency;
     Button buttonSetGuardian;
+    ConstraintLayout viewMain;
     float[] stableHeartRate = new float[20];
     float stableHeartRateAvg = 100;
     boolean checkHeartRate = false;
@@ -92,6 +98,8 @@ public class MainActivity extends AppCompatActivity
         loadGuardianList();
         setupEmergencyCancelButtonListener();
         setupCallStatusListener();
+        viewMain = findViewById(R.id.viewMain);
+        viewMain.setBackgroundColor(NORMAL_COLOR);
         emergencyCancelRef.setValue(false);
         emergencyRef.setValue(false);
         heartRateCheckTime = System.currentTimeMillis();
@@ -104,6 +112,7 @@ public class MainActivity extends AppCompatActivity
                 } else if(buttonCheckHeart.getText().equals("안정된 상태입니까?")){
                     checkHeartRate = true;
                     checkHeartRateStartDate = System.currentTimeMillis();
+                    checkHeartRateCount = 0;
                     buttonCheckHeart.setText("심박수측정중...[0/20]");
                 }
             }
@@ -184,20 +193,11 @@ public class MainActivity extends AppCompatActivity
                 Log.d("confirm", value.toString());
                 long checkTime = convertDateStringToTimestamp(value.getCheckDate());
                 if(heartRateCheckTime < checkTime){
-                    //1초마다 확인할려고
-                    if(emergency){
-                        if(emergencyStartTime + (EMERGENCY_CANCEL_WAIT_TIME * 1000) < checkTime){
-                            if(!calling) {
-                                callEmergency();
-                                emergencyStartTime = emergencyStartTime + (1000L * 365 * 24 * 60 * 60 * 1000);
-                            }
-                        }
-                    }
                     if(checkHeartRate){
                         long heartDateTimestamp = convertDateStringToTimestamp(value.getHeartDate());
                         if(checkHeartRateStartDate < heartDateTimestamp){
                             stableHeartRate[checkHeartRateCount++] = value.getHeartRate();
-                            if(checkHeartRateCount == 21){
+                            if(checkHeartRateCount == 20){
                                 checkHeartRate = false;
                                 buttonCheckHeart.setText("심박수측정완료");
                                 stableHeartRateAvg = 0;
@@ -248,7 +248,22 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onDataChange(@NotNull DataSnapshot snapshot) {
                 AnalysisData value = snapshot.getValue(AnalysisData.class);
-                Log.d("analysis", value.toString());
+                switch(value.getStatus()){
+                    case 1:
+                        Log.d("디버깅","정상공기");
+                        viewMain.setBackgroundColor(NORMAL_COLOR);
+                        break;
+                    case 2:
+                        Log.d("디버깅","경고공기");
+                        viewMain.setBackgroundColor(WARNING_COLOR);
+                        break;
+                    case 3:
+                        Log.d("디버깅","위험공기");
+                        viewMain.setBackgroundColor(DANGER_COLOR);
+                        break;
+                    default:
+                        break;
+                }
             }
 
             @Override
