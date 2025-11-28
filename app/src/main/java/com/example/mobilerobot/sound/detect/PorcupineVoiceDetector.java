@@ -133,7 +133,7 @@ public class PorcupineVoiceDetector {
                 fos.write(buf, 0, n);
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            throw new IOException("Asset not found: " + assetName, e);
         } catch (IOException e) {
             throw new IOException("Copied file is empty: " + outFile.getAbsolutePath());
         }
