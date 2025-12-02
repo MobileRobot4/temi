@@ -28,6 +28,9 @@ import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
+import androidx.media3.exoplayer.ExoPlayer;
 
 import com.example.temicommunication.sound.detect.PorcupineVoiceDetector;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -76,6 +79,7 @@ public class MainActivity extends AppCompatActivity
     private OnTelepresenceStatusChangedListener callStatusListener;
     private PoseOverlay poseOverlay;
     private PorcupineVoiceDetector voiceDetector;
+    private ExoPlayer exoPlayer;
     private final MoveDetection moveDetection = new MoveDetection();
     private final AtomicBoolean calling = new AtomicBoolean(false);
     private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
@@ -102,6 +106,8 @@ public class MainActivity extends AppCompatActivity
     ConstraintLayout viewMain;
     PreviewView previewView;
     PoseDetector poseDetector;
+    String streamUrl = "";
+    MediaItem mediaItem;
     float[] stableHeartRate = new float[20];
     float stableHeartRateAvg = 100;
     boolean checkHeartRate = false;
@@ -122,8 +128,7 @@ public class MainActivity extends AppCompatActivity
     List<UserInfo> calledGuardians = new ArrayList<>();
     Map<String, MemberStatusModel> statusMap = new HashMap<>();
     CameraSelector selector = new CameraSelector.Builder()
-            .requireLensFacing(isFrontFacing ?
-                    CameraSelector.LENS_FACING_FRONT : CameraSelector.LENS_FACING_BACK)
+            .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
             .build();
 
     @SuppressLint("checkResult")
@@ -136,6 +141,7 @@ public class MainActivity extends AppCompatActivity
         loadGuardianList();
         setupEmergencyCancelButtonListener();
         setupCallStatusListener();
+        exoPlayer = new ExoPlayer.Builder(this).build();
         viewMain = findViewById(R.id.viewMain);
         viewMain.setBackgroundColor(NORMAL_COLOR);
         poseOverlay = findViewById(R.id.poseOverlay);
@@ -437,9 +443,6 @@ public class MainActivity extends AppCompatActivity
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
                 analysis.setAnalyzer(Executors.newSingleThreadExecutor(), this::analyze);
-                CameraSelector selector = new CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
-                        .build();
                 provider.unbindAll();
                 provider.bindToLifecycle(this, selector, preview, analysis);
             } catch (Exception e){
@@ -465,6 +468,7 @@ public class MainActivity extends AppCompatActivity
                     poseOverlay.setPose(pose, srcW, srcH, rot);
                     if(hit){
                         Log.d("디버그", "넘어짐감지됨");
+                        callEmergency();
                     }
                     imageProxy.close();
                 }).addOnFailureListener(e -> {imageProxy.close();});
@@ -505,19 +509,19 @@ public class MainActivity extends AppCompatActivity
                 public void onTelepresenceStatusChanged(@org.jetbrains.annotations.NotNull CallState callState) {
                     switch (callState.getState()){
                         case ENDED:                 //전화끝났을때
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             emergencyEnded();
                             break;
                         case DECLINED:              //전화거절당했을때
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             callEmergency();
                             break;
                         case NOT_ANSWERED:          //전화걸고 상대방이 전화를 안받을때
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             callEmergency();
                             break;
                         case BUSY:                  //전화걸려고했는데 상대방이 BUSY상태일때
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             callEmergency();
                             break;
                         case STARTED:               //상대방이전화수락하고 전화가 시작했을때
@@ -525,11 +529,11 @@ public class MainActivity extends AppCompatActivity
                         case INITIALIZED:           //전화걸고 상대방이 반응하기전까지
                             break;
                         case POOR_CONNECTION:       //연결이슈로 전화 안될때
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             callEmergency();
                             break;
                         case CANT_JOIN:             //Cannot join the call - 전화에 합류할수 없을때?
-                            isCalling = false;
+                            calling.compareAndSet(true,false);
                             callEmergency();
                             break;
                         default:
@@ -580,7 +584,7 @@ public class MainActivity extends AppCompatActivity
                 () -> runOnUiThread(() -> {
                     if (!calling.compareAndSet(false, true)) return;
                     Log.d("디버그", "살려주세요 인식됨");
-
+                    callEmergency();
                     // 10초 후 다시 허용
                     new Handler(Looper.getMainLooper())
                             .postDelayed(() -> calling.set(false), 10_000);
@@ -618,6 +622,8 @@ public class MainActivity extends AppCompatActivity
                 }
             }
             robot.addOnBeWithMeStatusChangedListener(this);
+            exoPlayer.setMediaItem(mediaItem);
+            exoPlayer.prepare();
             try{
                 final ActivityInfo activityInfo = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
                 robot.onStart(activityInfo);
@@ -664,11 +670,14 @@ public class MainActivity extends AppCompatActivity
         for(UserInfo guardian : guardians) {
             MemberStatusModel status = statusMap.get(guardian.getUserId());
             if(status.getMobileStatus()==0 && !calledGuardians.contains(guardian)){
-                isCalling = true;
+                calling.compareAndSet(false,true);
+                Log.d("디버그", guardian.getName() + "에게 전화");
                 robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.MOBILE);
                 calledGuardians.add(guardian);
                 break;
             } else if(status.getCenterStatus() == 0 && !calledGuardians.contains(guardian)){
+                calling.compareAndSet(false,true);
+                Log.d("디버그", guardian.getName() + "에게 전화");
                 robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.TEMI_CENTER);
                 calledGuardians.add(guardian);
                 break;

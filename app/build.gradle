@@ -63,4 +63,7 @@ dependencies {
     implementation 'ai.picovoice:android-voice-processor:1.0.0'
     implementation 'org.tensorflow:tensorflow-lite-task-audio:0.4.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.0'
+    //라이브스트리밍
+    implementation "androidx.media3:media3-exoplayer:1.8.0"
+    implementation "androidx.media3:media3-exoplayer-dash:1.8.0"
 }
