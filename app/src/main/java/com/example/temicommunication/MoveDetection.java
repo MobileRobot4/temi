@@ -26,7 +26,7 @@ public class MoveDetection {
 
     // ★ 요청대로 1초·60cm로 수정  //lee
     private static final long WINDOW_MS = 1000;     //lee
-    private static final float CM_THRESHOLD = 60f;  //lee
+    private static final float CM_THRESHOLD = 200f;  //lee
     private static final long ALERT_COOLDOWN_MS = 8000;
 
     private float pxPerCm = -1f;

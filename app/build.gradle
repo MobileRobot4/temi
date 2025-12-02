@@ -58,4 +58,9 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:$camerax"
     implementation "androidx.camera:camera-view:$camerax"
     implementation "com.google.mlkit:pose-detection:18.0.0-beta5"
+    //음성인식
+    implementation 'ai.picovoice:porcupine-android:3.0.0'
+    implementation 'ai.picovoice:android-voice-processor:1.0.0'
+    implementation 'org.tensorflow:tensorflow-lite-task-audio:0.4.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.0'
 }
