@@ -20,7 +20,7 @@ public class MoveDetection {
     };
 
     // ★ 설정값 (테스트하며 조절하세요)
-    private static final long WINDOW_MS = 700;         // 0.6초간의 변화 감지
+    private static final long WINDOW_MS = 600;         // 0.6초간의 변화 감지
     private static final float FALL_VELOCITY_CM = 80f; // 초속 80cm 이상 빠르게 하강하면 의심
     private static final float FALL_ANGLE_DEG = 30f;   // 어깨가 30도 이상 기울어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
