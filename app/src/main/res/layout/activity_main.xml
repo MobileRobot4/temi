@@ -19,7 +19,7 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 포즈 오버레이 (프리뷰 위에 그림) -->
-    <com.example.temicommunication.PoseOverlay
+    <com.example.temicommunication.util.move.PoseOverlay
         android:id="@+id/poseOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"

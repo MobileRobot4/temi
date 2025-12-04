@@ -1,4 +1,4 @@
-package com.example.temicommunication;
+package com.example.temicommunication.Data;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

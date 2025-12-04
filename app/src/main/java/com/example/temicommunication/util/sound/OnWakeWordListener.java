@@ -1,4 +1,4 @@
-package com.example.temicommunication.sound.detect;
+package com.example.temicommunication.util.sound;
 
 public interface OnWakeWordListener {
 

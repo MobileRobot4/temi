@@ -28,11 +28,13 @@ import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MediaMetadata;
-import androidx.media3.exoplayer.ExoPlayer;
 
-import com.example.temicommunication.sound.detect.PorcupineVoiceDetector;
+import com.example.temicommunication.Data.AnalysisData;
+import com.example.temicommunication.Data.HeartRateData;
+import com.example.temicommunication.Data.SensorData;
+import com.example.temicommunication.util.sound.PorcupineVoiceDetector;
+import com.example.temicommunication.util.move.MoveDetection;
+import com.example.temicommunication.util.move.PoseOverlay;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -54,9 +56,9 @@ import com.robotemi.sdk.UserInfo;
 import com.robotemi.sdk.constants.Platform;
 import com.robotemi.sdk.listeners.OnBeWithMeStatusChangedListener;
 import com.robotemi.sdk.listeners.OnRobotReadyListener;
-import com.robotemi.sdk.listeners.OnTelepresenceStatusChangedListener;
+import com.robotemi.sdk.listeners.OnTelepresenceEventChangedListener;
+import com.robotemi.sdk.model.CallEventModel;
 import com.robotemi.sdk.model.MemberStatusModel;
-import com.robotemi.sdk.telepresence.CallState;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -73,20 +75,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.NonNull;
 
 public class MainActivity extends AppCompatActivity
-        implements OnRobotReadyListener, OnBeWithMeStatusChangedListener {
+        implements OnRobotReadyListener, OnBeWithMeStatusChangedListener, OnTelepresenceEventChangedListener{
 
     private ValueEventListener emergencyCancelButtonListener;
-    private OnTelepresenceStatusChangedListener callStatusListener;
     private PoseOverlay poseOverlay;
     private PorcupineVoiceDetector voiceDetector;
-    private ExoPlayer exoPlayer;
     private final MoveDetection moveDetection = new MoveDetection();
     private final AtomicBoolean calling = new AtomicBoolean(false);
     private static final int REQUEST_CODE_FOR_GUARDIAN = 1001;
     private static final int REQUEST_CODE_FOR_EMERGENCY = 1002;
     private static final int REQUEST_CODE_FOR_CAMERA = 1003;
     private static final int REQUEST_CODE_FOR_AUDIO = 1004;
-    private static final int EMERGENCY_COUNT_MAX = 2; //파이어베이스주기가 약5초로확인됨 실제 초수는 곱하기5해줘야됨
+    private static final int EMERGENCY_COUNT_MAX = 10;
     private static final int NORMAL_COLOR = Color.parseColor("#E8F5E9");
     private static final int WARNING_COLOR = Color.parseColor("#FFF3E0");
     private static final int DANGER_COLOR = Color.parseColor("#B71C1C");
@@ -106,23 +106,20 @@ public class MainActivity extends AppCompatActivity
     ConstraintLayout viewMain;
     PreviewView previewView;
     PoseDetector poseDetector;
-    String streamUrl = "";
-    MediaItem mediaItem;
     float[] stableHeartRate = new float[20];
     float stableHeartRateAvg = 100;
     boolean checkHeartRate = false;
     boolean isExercise = false;
     boolean isSleep = false;
     boolean emergency = false;
-    boolean hideEmergengyButton = true;
-    boolean isCalling = false;
-    boolean isFrontFacing = true;
-    boolean cameraDebug = false;
+    boolean hideEmergencyButton = true;
     int checkHeartRateCount = 0;
     int emergencyHeartCount = 0;
+    int count = 0;
     long checkHeartRateStartDate;
     long heartRateCheckTime;
     long emergencyStartTime;
+    long startCallTime;
     Robot robot;
     List<UserInfo> guardians = new ArrayList<>();
     List<UserInfo> calledGuardians = new ArrayList<>();
@@ -131,17 +128,15 @@ public class MainActivity extends AppCompatActivity
             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
             .build();
 
+
     @SuppressLint("checkResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         robot = Robot.getInstance();
-        robot.addOnRobotReadyListener(this);
         loadGuardianList();
         setupEmergencyCancelButtonListener();
-        setupCallStatusListener();
-        exoPlayer = new ExoPlayer.Builder(this).build();
         viewMain = findViewById(R.id.viewMain);
         viewMain.setBackgroundColor(NORMAL_COLOR);
         poseOverlay = findViewById(R.id.poseOverlay);
@@ -157,14 +152,12 @@ public class MainActivity extends AppCompatActivity
         buttonCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(cameraDebug){
+                if(previewView.getVisibility() != View.GONE){
                     previewView.setVisibility(View.GONE);
                     poseOverlay.setVisibility(View.GONE);
-                    cameraDebug = false;
                 } else {
                     previewView.setVisibility(View.VISIBLE);
                     poseOverlay.setVisibility(View.VISIBLE);
-                    cameraDebug = true;
                 }
             }
         });
@@ -212,7 +205,7 @@ public class MainActivity extends AppCompatActivity
             }
         });
         buttonEmergency = findViewById(R.id.buttonEmergency);
-        if(hideEmergengyButton){
+        if(hideEmergencyButton){
             buttonEmergency.setVisibility(View.GONE);
         } else {
             buttonEmergency.setVisibility(View.VISIBLE);
@@ -220,6 +213,9 @@ public class MainActivity extends AppCompatActivity
         buttonEmergency.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if(EmergencyCancelActivity.isRunning){
+                    return;
+                }
                 //여기에 응급상황(의심)발생시의 로직 생성
                 TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요",false);
                 robot.speak(ttsRequest);
@@ -257,8 +253,8 @@ public class MainActivity extends AppCompatActivity
         heartRateRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                //Log.d("디버그","카운트 : " + count++);
                 HeartRateData value = snapshot.getValue(HeartRateData.class);
-                Log.d("confirm", value.toString());
                 long checkTime = convertDateStringToTimestamp(value.getCheckDate());
                 if(heartRateCheckTime < checkTime){
                     if(checkHeartRate){
@@ -275,41 +271,40 @@ public class MainActivity extends AppCompatActivity
                                     stableHeartRateAvg+=stableHeartRate[i];
                                 }
                                 stableHeartRateAvg/=20;
-                                Log.d("디버그", "평균심박수 : " + stableHeartRateAvg);
-//                                try {
-//                                    Thread.sleep(3000);
-//                                } catch (InterruptedException e) {
-//                                    Thread.currentThread().interrupt();
-//                                    e.printStackTrace();
-//                                }
+                                try{
+                                    //심박수측정완료버튼을 3초동안 보이기위해 사용
+                                    Thread.sleep(3000);
+                                } catch (Exception e){
+                                    Log.e("스레드",e.getMessage());
+                                }
                                 buttonCheckHeart.setText("심박수측정하기(약20초)");
                             } else {
                                 buttonCheckHeart.setText("심박수측정중...[" + checkHeartRateCount + "/20]");
                             }
                         } else {
-                            Log.d("checkHeartRate","심박수데이터 최신화 안됨 ");
                         }
                     } else if(!isExercise && !isSleep){
                         if(value.getHeartRate()>stableHeartRateAvg*1.35 || value.getHeartRate()<stableHeartRateAvg*0.65) {
-                            if(!isCalling){
+                            if(!calling.get()){
                                 if(emergencyHeartCount >= EMERGENCY_COUNT_MAX) {
                                     emergency = true;
                                     emergencyHeartCount = 0;
                                     buttonEmergency.callOnClick();
                                 } else {
                                     emergencyHeartCount ++;
-                                    Log.d("emergencyHeartCount", "카운트 : " + emergencyHeartCount);
                                 }
                             }
                         } else {
                             emergencyHeartCount = 0;
+                            if(EmergencyCancelActivity.isRunning){
+                                emergencyEnded();
+                            }
                         }
                     } else if(isExercise || isSleep){
                         emergencyHeartCount = 0;
                     }
                 }
             }
-
             @Override
             public void onCancelled(DatabaseError error) {
                 Log.e("heart", error.getMessage());
@@ -321,15 +316,12 @@ public class MainActivity extends AppCompatActivity
                 AnalysisData value = snapshot.getValue(AnalysisData.class);
                 switch(value.getStatus()){
                     case 1:
-                        Log.d("디버깅","정상공기");
                         viewMain.setBackgroundColor(NORMAL_COLOR);
                         break;
                     case 2:
-                        Log.d("디버깅","경고공기");
                         viewMain.setBackgroundColor(WARNING_COLOR);
                         break;
                     case 3:
-                        Log.d("디버깅","위험공기");
                         viewMain.setBackgroundColor(DANGER_COLOR);
                         break;
                     default:
@@ -346,7 +338,6 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 SensorData value = snapshot.getValue(SensorData.class);
-                Log.d("sensor", value.toString());
             }
 
             @Override
@@ -381,10 +372,6 @@ public class MainActivity extends AppCompatActivity
             voiceDetector.release();
             voiceDetector = null;
         }
-
-        if(robot != null){
-            robot.removeOnRobotReadyListener(this);
-        }
         super.onDestroy();
     }
 
@@ -399,11 +386,9 @@ public class MainActivity extends AppCompatActivity
                         showNotGuardianDialog();
                     } else {
                         saveGuardianList();
-                        Log.d("guardians", "보호자받음 : " + guardians.toString());
                     }
                 }
             } else if(resultCode == Activity.RESULT_CANCELED){
-                Log.d("guardians","취소되었습니다");
             }
         } else if(requestCode == REQUEST_CODE_FOR_EMERGENCY){
             if(resultCode != 4) {
@@ -422,8 +407,8 @@ public class MainActivity extends AppCompatActivity
                 startCamera();
             }
         } else if(requestCode == REQUEST_CODE_FOR_AUDIO){
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                setupVoiceDetector();
+            if(grantResults.length > 0 &&grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                //setupVoiceDetector();
                 if(voiceDetector != null){
                     voiceDetector.start();
                 }
@@ -432,7 +417,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void startCamera(){
-        Log.d("디버그", "카메라시작");
         ListenableFuture<ProcessCameraProvider> future = ProcessCameraProvider.getInstance(this);
         future.addListener(() -> {
             try{
@@ -446,7 +430,7 @@ public class MainActivity extends AppCompatActivity
                 provider.unbindAll();
                 provider.bindToLifecycle(this, selector, preview, analysis);
             } catch (Exception e){
-                Log.e("디버그", "카메라오류 : " + e.getMessage());
+                Log.e("카메라", "카메라오류 : " + e.getMessage());
             }
         }, ContextCompat.getMainExecutor(this));
     }
@@ -467,8 +451,7 @@ public class MainActivity extends AppCompatActivity
                     int moved = moveDetection.getLastMovedCount();
                     poseOverlay.setPose(pose, srcW, srcH, rot);
                     if(hit){
-                        Log.d("디버그", "넘어짐감지됨");
-                        callEmergency();
+                        buttonEmergency.callOnClick();
                     }
                     imageProxy.close();
                 }).addOnFailureListener(e -> {imageProxy.close();});
@@ -481,7 +464,6 @@ public class MainActivity extends AppCompatActivity
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("guardian_list",json);
         editor.apply();
-        Log.d("guardians", "로컬저장완료 : " + guardians.toString());
     }
 
     private void setupEmergencyCancelButtonListener() {
@@ -502,48 +484,6 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void setupCallStatusListener(){
-        if(callStatusListener == null) {
-            callStatusListener = new OnTelepresenceStatusChangedListener("") {
-                @Override
-                public void onTelepresenceStatusChanged(@org.jetbrains.annotations.NotNull CallState callState) {
-                    switch (callState.getState()){
-                        case ENDED:                 //전화끝났을때
-                            calling.compareAndSet(true,false);
-                            emergencyEnded();
-                            break;
-                        case DECLINED:              //전화거절당했을때
-                            calling.compareAndSet(true,false);
-                            callEmergency();
-                            break;
-                        case NOT_ANSWERED:          //전화걸고 상대방이 전화를 안받을때
-                            calling.compareAndSet(true,false);
-                            callEmergency();
-                            break;
-                        case BUSY:                  //전화걸려고했는데 상대방이 BUSY상태일때
-                            calling.compareAndSet(true,false);
-                            callEmergency();
-                            break;
-                        case STARTED:               //상대방이전화수락하고 전화가 시작했을때
-                            break;
-                        case INITIALIZED:           //전화걸고 상대방이 반응하기전까지
-                            break;
-                        case POOR_CONNECTION:       //연결이슈로 전화 안될때
-                            calling.compareAndSet(true,false);
-                            callEmergency();
-                            break;
-                        case CANT_JOIN:             //Cannot join the call - 전화에 합류할수 없을때?
-                            calling.compareAndSet(true,false);
-                            callEmergency();
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            };
-        }
-    }
-
     private void loadGuardianList(){
         SharedPreferences sharedPreferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         String json = sharedPreferences.getString("guardian_list",null);
@@ -554,11 +494,9 @@ public class MainActivity extends AppCompatActivity
             if(savedGuardianList != null && !savedGuardianList.isEmpty()) {
                 guardians.clear();
                 guardians.addAll(savedGuardianList);
-                Log.d("guardians", "로컬에서 불러옴 : " + guardians.toString());
             }
         } else {
             guardians.clear();
-            Log.d("guardians", "로컬에 데이터 없음");
         }
     }
 
@@ -583,8 +521,8 @@ public class MainActivity extends AppCompatActivity
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     if (!calling.compareAndSet(false, true)) return;
-                    Log.d("디버그", "살려주세요 인식됨");
-                    callEmergency();
+                    //Log.d("디버그", "살려주세요 인식됨");
+                    buttonEmergency.callOnClick();
                     // 10초 후 다시 허용
                     new Handler(Looper.getMainLooper())
                             .postDelayed(() -> calling.set(false), 10_000);
@@ -595,18 +533,25 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onStart() {
+        Log.d("디버그","onStart");
         super.onStart();
+        robot.addOnRobotReadyListener(this);
+        robot.addOnBeWithMeStatusChangedListener(this);
+        robot.addOnTelepresenceEventChangedListener(this);
     }
 
     @Override
     public void onStop() {
+        Log.d("디버그","onStop");
         super.onStop();
         robot.removeOnRobotReadyListener(this);
         robot.removeOnBeWithMeStatusChangedListener(this);
+        robot.removeOnTelepresenceEventChangedListener(this);
     }
 
     @Override
     public void onRobotReady(boolean isReady){
+        Log.d("디버그", "로봇준비됨");
         if(isReady){
             if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
                 ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.CAMERA},REQUEST_CODE_FOR_CAMERA);
@@ -621,9 +566,6 @@ public class MainActivity extends AppCompatActivity
                     voiceDetector.start();
                 }
             }
-            robot.addOnBeWithMeStatusChangedListener(this);
-            exoPlayer.setMediaItem(mediaItem);
-            exoPlayer.prepare();
             try{
                 final ActivityInfo activityInfo = getPackageManager().getActivityInfo(getComponentName(), PackageManager.GET_META_DATA);
                 robot.onStart(activityInfo);
@@ -636,6 +578,7 @@ public class MainActivity extends AppCompatActivity
     //로봇이 따라가기 상태가 변할때 실행하는 메서드
     @Override
     public void onBeWithMeStatusChanged(String status) {
+        Log.d("디버그","따라가기상태변화");
         switch(status) {
             case ABORT:             //따라가기 중단됐을때
                 break;
@@ -654,6 +597,20 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void onTelepresenceEventChanged(CallEventModel model){
+        if(emergency){
+            if(model.getState() == 1){
+                if(System.currentTimeMillis()-startCallTime > 52000){
+                    calling.set(false);
+                    emergencyEnded();
+                } else {
+                    callEmergency();
+                }
+            }
+        }
+    }
+
     public void callEmergency(){
         //보호자에게전화걸기
         //전화가능상태를 가져와서 전화가능한사람먼저 통화
@@ -666,21 +623,28 @@ public class MainActivity extends AppCompatActivity
         if(guardians.size() == calledGuardians.size()) {
             calledGuardians.clear();
         }
-        robot.addOnTelepresenceStatusChangedListener(callStatusListener);
         for(UserInfo guardian : guardians) {
             MemberStatusModel status = statusMap.get(guardian.getUserId());
             if(status.getMobileStatus()==0 && !calledGuardians.contains(guardian)){
                 calling.compareAndSet(false,true);
-                Log.d("디버그", guardian.getName() + "에게 전화");
-                robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.MOBILE);
+                startCallTime = System.currentTimeMillis();
+                robot.startTelepresence("",guardian.getUserId(),Platform.MOBILE);
                 calledGuardians.add(guardian);
                 break;
             } else if(status.getCenterStatus() == 0 && !calledGuardians.contains(guardian)){
                 calling.compareAndSet(false,true);
-                Log.d("디버그", guardian.getName() + "에게 전화");
-                robot.startTelepresence("보호자통화",guardian.getUserId(),Platform.TEMI_CENTER);
+                startCallTime = System.currentTimeMillis();
+                robot.startTelepresence("",guardian.getUserId(),Platform.TEMI_CENTER);
                 calledGuardians.add(guardian);
                 break;
+            }
+            //이곳은 남은 보호자중 통화할수있는 사람이 아무도 없을때
+            if(calledGuardians.size() == 0){
+                TtsRequest ttsRequest = TtsRequest.create("연락할수있는 보호자가 없습니다",false);
+                robot.speak(ttsRequest);
+            } else {
+                calledGuardians.clear();
+                callEmergency();
             }
         }
     }
@@ -693,7 +657,6 @@ public class MainActivity extends AppCompatActivity
             emergencyRef.setValue(false);
             emergencyCancelRef.setValue(false);
             emergencyCancelRef.removeEventListener(emergencyCancelButtonListener);
-            robot.removeOnTelepresenceStatusChangedListener(callStatusListener);
             emergencyHeartCount=0;
             EmergencyCancelActivity emergencyCancelActivity = EmergencyCancelActivity.getInstance();
             if(emergencyCancelActivity != null){

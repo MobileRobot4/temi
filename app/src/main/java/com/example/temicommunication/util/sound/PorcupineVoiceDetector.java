@@ -1,4 +1,4 @@
-package com.example.temicommunication.sound.detect;
+package com.example.temicommunication.util.sound;
 
 import android.content.Context;
 import android.content.res.AssetManager;
@@ -20,7 +20,7 @@ public class PorcupineVoiceDetector {
     private final String assetModelFile ;
     private final OnWakeWordListener onWakeWordListener;
 
-    private static final String accessKey = "0L0YImJRF6kkK3bH4z1hXjGE2mHEpFf+Xu1yTcRdijCaRnX6+MylaQ==";
+    private static final String accessKey = "io4qfGUY7/cT7lJ8S7217ymN7RTKbgAK6Lgs54/tI7WJdS4Tpi0V5w==";
 
     private PorcupineManager porcupineManager;
 
@@ -76,7 +76,11 @@ public class PorcupineVoiceDetector {
 
     public void start() {
         if (porcupineManager == null) {
-            throw new IllegalArgumentException("porcupineManager가 생성되지 않았습니다.");
+            //throw new IllegalArgumentException("porcupineManager가 생성되지 않았습니다.");
+            initPorcupine();
+            if(porcupineManager == null){
+                return;
+            }
         }
 
         try {

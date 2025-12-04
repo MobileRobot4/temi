@@ -1,4 +1,4 @@
-package com.example.temicommunication;
+package com.example.temicommunication.Data;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class HeartRateData {
-    private String CheckDate;
-    private String HeartDate;
-    private float HeartRate;
+public class AnalysisData {
+    private String Reason;
+    private int Status;
+
 }

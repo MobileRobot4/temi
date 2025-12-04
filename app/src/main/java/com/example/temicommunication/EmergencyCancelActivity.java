@@ -25,6 +25,7 @@ public class EmergencyCancelActivity extends AppCompatActivity {
     public static EmergencyCancelActivity getInstance(){
         return instance;
     }
+    public static boolean isRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -60,7 +61,6 @@ public class EmergencyCancelActivity extends AppCompatActivity {
             long elapsedMillis = now - emergencyStartTime;
             long seconds = elapsedMillis / 1000;
             textViewSecond.setText("[" + seconds + "초/" + MAX_WAIT_SECONDS + "초]");
-            Log.d("응급상황","[" + seconds + "초/" + MAX_WAIT_SECONDS + "초]");
             if(seconds >= MAX_WAIT_SECONDS + 1){
                 // 7초까지 표시 후 8초가 되는 순간 종료
                 stopTimer();
@@ -76,6 +76,7 @@ public class EmergencyCancelActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        isRunning = false;
         stopTimer();
     }
 
@@ -83,23 +84,34 @@ public class EmergencyCancelActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        isRunning = false;
         stopTimer();
         if(instance == this) {
             instance = null;
         }
     }
 
+    @Override
+    protected void onResume(){
+        super.onResume();
+        isRunning = true;
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        isRunning = false;
+    }
+
 
     private void startTimer() {
         // 즉시 실행 및 1초 간격으로 반복 시작
         handler.post(updateTimeRunnable);
-        Log.d("Timer", "타이머 시작");
     }
 
     private void stopTimer() {
         // 예약된 모든 콜백을 제거하여 반복을 중지합니다.
         handler.removeCallbacks(updateTimeRunnable);
-        Log.d("Timer", "타이머 중지");
     }
 
 }
