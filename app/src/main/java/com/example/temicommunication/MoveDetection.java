@@ -43,8 +43,8 @@ public class MoveDetection {
     private long lastAlert = 0L;
 
     private long lastVisibleTime = 0L; //+
-    public void setPxPerCm(float v){ this.pxPerCm = v; }     //lee
-    public float getPxPerCm(){ return pxPerCm; }             //lee
+    //public void setPxPerCm(float v){ this.pxPerCm = v; }     //lee
+    //public float getPxPerCm(){ return pxPerCm; }             //lee
     public int getLastMovedCount(){ return lastMovedCount; } //lee
 
 
