@@ -28,7 +28,7 @@ public class MoveDetection {
     private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기가 30도 이상 틀어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
     private static final float CM_THRESHOLD = 100f;  //lee
-    private static final long DISAPPEAR_MS = 500; //+
+    private static final long DISAPPEAR_MS = 5000; //+
 
     private float pxPerCm = -1f;
     private int lastMovedCount = 0;                 //lee

@@ -84,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
         // ===== 추가: 카메라 프리뷰/Temi/포즈 초기화 =====
         previewView = findViewById(R.id.viewFinder);        //lee
         robot = Robot.getInstance();                        //lee
+
+
         poseDetector = PoseDetection.getClient(             //lee
                 new PoseDetectorOptions.Builder()           //lee
                         .setDetectorMode(PoseDetectorOptions.STREAM_MODE) //lee
@@ -111,6 +113,8 @@ public class MainActivity extends AppCompatActivity {
                 distanceText.setText("fail");
             }
         });
+
+        robot.setDetectionModeOn(true, 2);
     }
 
     // ===== 추가: 권한 콜백에서 카메라 시작 =====
