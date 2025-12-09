@@ -1,37 +1,39 @@
 package com.example.temicommunication;
 
 import android.graphics.PointF;
-import android.util.Log;
 import com.google.mlkit.vision.pose.Pose;
 import com.google.mlkit.vision.pose.PoseLandmark;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.ArrayDeque;  //lee
+import java.util.Deque;      //lee
+import java.util.HashMap;    //lee
+import java.util.Map;        //lee
 
 public class MoveDetection {
 
-    // 엉덩이(23,24)는 Temi 화면에서 잘릴 수 있으므로, 상체(코, 어깨) 위주로 판단합니다.
+    // 필요한 랜드마크만 정의 (코, 어깨 위주)
     private static final int[] TARGET = new int[]{
-            PoseLandmark.NOSE,            // 0
-            PoseLandmark.LEFT_SHOULDER,   // 11
-            PoseLandmark.RIGHT_SHOULDER   // 12
+            PoseLandmark.NOSE,                 // 0
+            PoseLandmark.LEFT_EYE,             // 2
+            PoseLandmark.RIGHT_EYE,            // 5
+            PoseLandmark.LEFT_MOUTH,           // 9
+            PoseLandmark.RIGHT_MOUTH,          // 10
+            PoseLandmark.LEFT_SHOULDER,        // 11
+            PoseLandmark.RIGHT_SHOULDER,       // 12
     };
 
-    // 설정값 튜닝
-    private static final long WINDOW_MS = 600;       // 관찰 시간
-    private static final float FALL_VELOCITY_CM = 60f; // 속도 임계값 (조절 가능)
-    private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기 (45도 이상이면 위험)
-
-    // ✅ 핵심 추가: 상체 무너짐 판단 비율
-    // 코와 어깨 사이의 수직 거리가 어깨 너비의 20% 이하로 줄어들면 '수평(넘어짐)'으로 간주
-    private static final float TORSO_COLLAPSE_RATIO = 0.2f;
-
+    // 설정값
+    private static final long WINDOW_MS = 600;       // 1초 -> 0.5초로 단축 (낙상은 순간적임)
+    private static final float FALL_VELOCITY_CM = 60f; // 초속 80cm 이상 하강 시 의심
+    private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기가 30도 이상 틀어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
+    private static final float CM_THRESHOLD = 100f;  //lee
+    private static final long DISAPPEAR_MS = 500; //+
 
     private float pxPerCm = -1f;
+    private int lastMovedCount = 0;                 //lee
 
-    // 데이터 저장용 클래스
+    // 랜드마크별 과거 데이터 저장
     private static class Sample {
         final float x, y; final long t;
         Sample(float x, float y, long t){ this.x=x; this.y=y; this.t=t; }
@@ -40,83 +42,163 @@ public class MoveDetection {
     private final Map<Integer, Deque<Sample>> history = new HashMap<>();
     private long lastAlert = 0L;
 
+    private long lastVisibleTime = 0L; //+
+    public void setPxPerCm(float v){ this.pxPerCm = v; }     //lee
+    public float getPxPerCm(){ return pxPerCm; }             //lee
+    public int getLastMovedCount(){ return lastMovedCount; } //lee
+
+
+    /**
+     * 낙상 감지 로직
+     * 조건 1: 어깨/머리의 Y축 좌표가 급격히 증가 (화면 아래로 떨어짐)
+     * 조건 2: 어깨의 수평 기울기가 깨짐 (앉기와 구별)
+     * @return
+     */
     public boolean updateAndCheck(Pose pose, long nowMs) {
         if (pose == null) return false;
 
-        // 1. 주요 랜드마크 추출
-        PoseLandmark nose = pose.getPoseLandmark(PoseLandmark.NOSE);
-        PoseLandmark lShoulder = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER);
-        PoseLandmark rShoulder = pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER);
+        // 1. 픽셀-cm 비율 갱신 (어깨 너비 기준)
+        PoseLandmark L = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER);
+        PoseLandmark R = pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER);
+        PoseLandmark N = pose.getPoseLandmark(PoseLandmark.NOSE);
 
-        // 상체가 안 보이면 판단 불가
-        if (nose == null || lShoulder == null || rShoulder == null) return false;
+        // [수정] 중요 포인트가 존재하는지 확인 (Nose, Left Shoulder, Right Shoulder)
+        boolean isVisible = (L != null && R != null && N != null);
 
-        PointF pN = nose.getPosition();
-        PointF pL = lShoulder.getPosition();
-        PointF pR = rShoulder.getPosition();
+        if (isVisible) {
+            // [추가] 관절이 보이면 마지막 인식 시간을 현재 시간으로 갱신
+            lastVisibleTime = nowMs;
+        } else {
+            // [추가] 관절이 안 보일 경우: 사라진 지 0.5초가 지났는지 체크
+            // (lastVisibleTime > 0 조건은 앱 켜자마자 알림 울리는 것 방지)
+            if (lastVisibleTime > 0 && (nowMs - lastVisibleTime > DISAPPEAR_MS)) {
 
-        // 2. 픽셀-cm 비율 갱신 (어깨 너비 기준, 38cm 가정)
-        // Temi가 움직여서 거리가 변해도, 비율 기반이므로 어느정도 보정됨
-        float shoulderWidthPx = (float) Math.hypot(pL.x - pR.x, pL.y - pR.y);
-        if (shoulderWidthPx > 20f) {
-            pxPerCm = shoulderWidthPx / 38f;
+                // 쿨다운 체크 (이미 알림을 보냈으면 패스)
+                if (nowMs - lastAlert > ALERT_COOLDOWN_MS) {
+                    lastAlert = nowMs;
+                    return true; // 경고 알림 발생! (사라짐 감지)
+                }
+            }
         }
+
+        // 중요 포인트가 없으면 판단 불가
+        if (L == null || R == null || N == null) return false;
+
+        PointF pL = L.getPosition();
+        PointF pR = R.getPosition();
+        PointF pN = N.getPosition();
+
+        // 어깨 너비(약 38cm)를 기준으로 비율 계산
+        if (pxPerCm <= 0f) {
+            float shoulderPx = (float) Math.hypot(pL.x - pR.x, pL.y - pR.y);
+            if (shoulderPx > 20f) pxPerCm = shoulderPx / 38f;
+        }
+
+        // 비율이 아직 계산 안됐으면 기본값 방어 (임의로 1cm = 5px 가정)
         float currentPxPerCm = (pxPerCm > 0) ? pxPerCm : 5.0f;
 
-        // 3. 히스토리 업데이트
+        // 2. 히스토리 업데이트 (각 랜드마크별)
         updateHistory(PoseLandmark.NOSE, pN, nowMs);
         updateHistory(PoseLandmark.LEFT_SHOULDER, pL, nowMs);
         updateHistory(PoseLandmark.RIGHT_SHOULDER, pR, nowMs);
 
-        // ---------------------------------------------------------
-        // 🚀 낙상 감지 알고리즘 개선 (속도 + 기하학적 구조)
-        // ---------------------------------------------------------
+        // 3. 낙상 판단 로직 시작
 
-        // [조건 1] 하강 속도 (Y축)
-        // 코와 어깨의 평균 하강 속도를 봅니다.
-        float noseSpeed = getVerticalSpeed(PoseLandmark.NOSE, currentPxPerCm, nowMs);
-        float shoulderSpeed = (getVerticalSpeed(PoseLandmark.LEFT_SHOULDER, currentPxPerCm, nowMs) +
-                getVerticalSpeed(PoseLandmark.RIGHT_SHOULDER, currentPxPerCm, nowMs)) / 2f;
+        // [Check 1] 하강 속도 (Velocity Y)
+        // 양쪽 어깨의 Y축 변화량을 체크합니다. (X축 이동인 달리기 제외)
+        float leftSpeed = getVerticalSpeed(PoseLandmark.LEFT_SHOULDER, currentPxPerCm, nowMs);
+        float rightSpeed = getVerticalSpeed(PoseLandmark.RIGHT_SHOULDER, currentPxPerCm, nowMs);
+        float avgDropSpeed = (leftSpeed + rightSpeed) / 2f;
 
-        // 코나 어깨 중 하나라도 빠르게 떨어지고 있어야 함
-        boolean isFastDrop = (noseSpeed > FALL_VELOCITY_CM) || (shoulderSpeed > FALL_VELOCITY_CM);
-
-        // [조건 2] 상체 수직성 (Sitting vs Falling 구분 핵심) ✅
-        // 앉을 때는 코가 어깨보다 확실히 위에 있음 (Y값이 작음).
-        // 넘어지면 코와 어깨의 Y값이 비슷해짐.
-        float shoulderMidY = (pL.y + pR.y) / 2f;
-        float verticalDist = shoulderMidY - pN.y; // 양수여야 정상(코가 위)
-
-        // 수직 거리를 어깨 너비로 나눈 비율 (체격 차이 보정)
-        float torsoRatio = verticalDist / shoulderWidthPx;
-
-        // 비율이 낮으면(예: 0.2 미만) 코와 어깨 높이가 비슷함 -> 누웠거나 엎드림
-        boolean isTorsoCollapsed = (torsoRatio < TORSO_COLLAPSE_RATIO);
-
-        // [조건 3] 어깨 기울기 (좌우 균형 붕괴)
-        float dy = pR.y - pL.y;
+        // [Check 2] 어깨 기울기 (Posture Angle)
+        // 서 있거나 앉을 때는 0도에 가깝음. 넘어지면 각도가 커짐.
         float dx = pR.x - pL.x;
-        double angleDeg = Math.abs(Math.toDegrees(Math.atan2(dy, dx)));
+        float dy = pR.y - pL.y;
+        double angleRad = Math.atan2(dy, dx);
+        double angleDeg = Math.abs(Math.toDegrees(angleRad)); // 0~180도
+
+        // [최종 판단]
+        // 조건: "빠르게 하강하고 있다" AND ("몸이 기울어졌다" OR "머리가 어깨보다 낮아졌다")
+        // * 앉을 때는 속도는 빠를 수 있어도 angleDeg가 0에 가까워서 걸러짐.
+        // * 달릴 때는 Y축 속도가 낮아서 걸러짐.
+        boolean isFastDrop = avgDropSpeed > FALL_VELOCITY_CM; // 초속 80cm 이상 하강
         boolean isTilted = angleDeg > FALL_ANGLE_DEG && angleDeg < (180 - FALL_ANGLE_DEG);
 
-        // ---------------------------------------------------------
-        // 최종 판단:
-        // "빠르게 하강함" AND ("상체가 무너짐(수평)" OR "심하게 기울어짐")
-        // ---------------------------------------------------------
+        // 디버깅용 로그 (필요시 주석 해제)
+        // Log.d("FallCheck", "Speed: " + avgDropSpeed + " | Angle: " + angleDeg);
 
-        if (isFastDrop && (isTorsoCollapsed || isTilted)) {
-            // 달리기 필터링: 달리기는 X축 이동이 많음 (여기서는 생략했으나, 필요 시 추가 가능)
-            // 앉기 필터링: 앉기는 isFastDrop일 수 있어도, isTorsoCollapsed가 false임 (상체 꼿꼿)
-
+        if (isFastDrop && isTilted) {
             if (nowMs - lastAlert > ALERT_COOLDOWN_MS) {
-                Log.e("FallDetection", "낙상 감지! Speed:" + noseSpeed + " Ratio:" + torsoRatio + " Angle:" + angleDeg);
                 lastAlert = nowMs;
-                return true;
+                return true; // 낙상 감지!
             }
         }
 
         return false;
     }
+
+//    /** 1초 내 60cm 이상 이동한 포인트가 3개 이상이면 true */ //lee
+//    public boolean updateAndCheck(Pose pose, long nowMs){
+//        if (pose == null) return false;
+//
+//        // 어깨폭≈38cm로 px→cm 간이 보정
+//        if (pxPerCm <= 0f){
+//            PoseLandmark L = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER);
+//            PoseLandmark R = pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER);
+//            if (L!=null && R!=null){
+//                PointF a = L.getPosition();
+//                PointF b = R.getPosition();
+//                float shoulderPx = (float) Math.hypot(a.x-b.x, a.y-b.y);
+//                if (shoulderPx > 10f) pxPerCm = shoulderPx / 38f; //lee
+//            }
+//        }
+//
+//        int moved = 0;
+//        float pxTh = (pxPerCm > 0f) ? (CM_THRESHOLD * pxPerCm) : 240f; // 60cm*pxPerCm 불가시 임시값 상향 //lee
+//
+//        for (int type : TARGET){
+//            PoseLandmark lm = pose.getPoseLandmark(type);
+//            if (lm == null) continue;
+//
+//            PointF p = lm.getPosition();
+//
+//            // API23 호환(get/put)  //lee
+//            Deque<Sample> q = history.get(type);
+//            if (q == null) {
+//                q = new ArrayDeque<>();
+//                history.put(type, q);
+//            }
+//
+//            q.addLast(new Sample(p.x, p.y, nowMs));
+//
+//            // 1초 윈도우 유지(NPE 안전)  //lee
+//            Sample head = q.peekFirst();
+//            while (head != null && nowMs - head.t > WINDOW_MS) {
+//                q.removeFirst();
+//                head = q.peekFirst();
+//            }
+//
+//            if (q.size() >= 2) {
+//                Sample first = q.peekFirst();
+//                Sample last  = q.peekLast();
+//                if (first != null && last != null) {
+//                    float distPx = (float) Math.hypot(last.x - first.x, last.y - first.y);
+//                    if (distPx >= pxTh) moved++;
+//                }
+//            }
+//        }
+//
+//        lastMovedCount = moved;  //lee
+//
+//        if (moved >= 3 && nowMs - lastAlert > ALERT_COOLDOWN_MS){
+//            lastAlert = nowMs;
+//            return true;
+//        }
+//        return false;
+//    }
+//// ======================================================
+//
+    // 특정 랜드마크의 데이터를 큐에 넣고 오래된 데이터 삭제
 
     private void updateHistory(int type, PointF p, long nowMs) {
         Deque<Sample> q = history.get(type);
@@ -125,27 +207,34 @@ public class MoveDetection {
             history.put(type, q);
         }
         q.addLast(new Sample(p.x, p.y, nowMs));
+
+        // 윈도우 시간(0.5초) 지난 데이터 삭제
         while (!q.isEmpty() && nowMs - q.peekFirst().t > WINDOW_MS) {
             q.removeFirst();
         }
     }
 
-    // Y축 하강 속도 (cm/sec) - 아래로 떨어질 때만 양수 반환
+    // 특정 랜드마크의 Y축 하강 속도 계산 (cm/sec)
     private float getVerticalSpeed(int type, float currentPxPerCm, long nowMs) {
         Deque<Sample> q = history.get(type);
         if (q == null || q.size() < 2) return 0f;
 
-        Sample start = q.peekFirst();
-        Sample end = q.peekLast();
+        Sample start = q.peekFirst(); // 약 0.5초 전
+        Sample end   = q.peekLast();  // 현재
 
+        // 시간 차이 (초 단위)
         float timeSec = (end.t - start.t) / 1000f;
-        if (timeSec < 0.2f) return 0f; // 너무 짧은 시간은 노이즈로 처리
+        if (timeSec < 0.1f) return 0f; // 너무 짧으면 계산 스킵
 
-        float distY_px = end.y - start.y; // +가 아래쪽(하강)
+        // Y축 변화량 (Android는 아래쪽이 +Y)
+        // 떨어질 때: end.y > start.y
+        float distY_px = end.y - start.y;
 
-        // 올라가는 동작(앉았다 일어나기)은 무시
-        if (distY_px <= 0) return 0f;
+        // 올라가는 경우(음수)는 낙상이 아니므로 0 처리
+        if (distY_px < 0) return 0f;
 
         return (distY_px / currentPxPerCm) / timeSec;
     }
+
 }
+
