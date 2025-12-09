@@ -84,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
         // ===== 추가: 카메라 프리뷰/Temi/포즈 초기화 =====
         previewView = findViewById(R.id.viewFinder);        //lee
         robot = Robot.getInstance();                        //lee
+
+
         poseDetector = PoseDetection.getClient(             //lee
                 new PoseDetectorOptions.Builder()           //lee
                         .setDetectorMode(PoseDetectorOptions.STREAM_MODE) //lee
