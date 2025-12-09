@@ -28,8 +28,8 @@ public class MoveDetection {
     private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기가 30도 이상 틀어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
     //private static final float CM_THRESHOLD = 100f;  //lee
-    private static final long DISAPPEAR_MS = 5000; //+
-
+    private static final float MIN_SHOULDER_PX = 200f; //+
+    private static final long DISAPPEAR_MS = 5000;
     private float pxPerCm = -1f;
     private int lastMovedCount = 0;                 //lee
 
@@ -80,6 +80,23 @@ public class MoveDetection {
                 }
             }
         }
+        // [추가된 기능] 거리 필터링 (멀리 있는 사람 무시)
+        // ---------------------------------------------------------
+        if (isVisible) {
+            PointF pL_temp = L.getPosition();
+            PointF pR_temp = R.getPosition();
+
+            // 어깨 너비 계산 (피타고라스 정리)
+            float currentShoulderPx = (float) Math.hypot(pL_temp.x - pR_temp.x, pL_temp.y - pR_temp.y);
+
+            // 어깨가 너무 좁다(=멀리 있다)면 아예 계산하지 않고 종료
+            if (currentShoulderPx < MIN_SHOULDER_PX) {
+                // 주의: 멀리 있는 경우에도 '사라짐 알림'이 울리지 않게 하려면
+                // lastVisibleTime을 갱신해주는 것이 좋습니다. (선택사항)
+                // lastVisibleTime = nowMs;
+                return false;
+            }
+        } //+
 
         // 중요 포인트가 없으면 판단 불가
         if (L == null || R == null || N == null) return false;
