@@ -39,11 +39,14 @@ import com.google.mlkit.vision.pose.PoseDetector;       //lee
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions;
 import com.robotemi.sdk.Robot;                          //lee
 import com.robotemi.sdk.TtsRequest;                     //lee
+import com.robotemi.sdk.listeners.OnBeWithMeStatusChangedListener;
+import com.robotemi.sdk.navigation.model.SpeedLevel;
+
 import java.util.concurrent.Executors;                  //lee
 
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnBeWithMeStatusChangedListener {
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference myRef = firebaseDatabase.getReference();
@@ -84,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
         // ===== 추가: 카메라 프리뷰/Temi/포즈 초기화 =====
         previewView = findViewById(R.id.viewFinder);        //lee
         robot = Robot.getInstance();                        //lee
+
+        robot.addOnBeWithMeStatusChangedListener(this);
 
 
         poseDetector = PoseDetection.getClient(             //lee
@@ -184,5 +189,14 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> { imageProxy.close(); });         //lee
     }                                                                    //lee
+
+    @Override
+    public void onBeWithMeStatusChanged(@org.jetbrains.annotations.NotNull String s) {
+        Log.d("디버그", s);
+        if (s == SEARCH) {
+            Log.d("디버그","세팅");
+            robot.beWithMe(SpeedLevel.SLOW);
+        }
+    }
     // ========================================
 }
