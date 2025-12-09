@@ -23,12 +23,12 @@ public class MoveDetection {
     };
 
     // 설정값
-    private static final long WINDOW_MS = 600;       // 1초 -> 0.5초로 단축 (낙상은 순간적임)
-    private static final float FALL_VELOCITY_CM = 60f; // 초속 80cm 이상 하강 시 의심
+    private static final long WINDOW_MS = 600;       // 1초 -> 0.6초로 단축 (낙상은 순간적임)
+    private static final float FALL_VELOCITY_CM = 60f; // 초속 60cm 이상 하강 시 의심
     private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기가 30도 이상 틀어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
-    private static final float CM_THRESHOLD = 100f;  //lee
-    private static final long DISAPPEAR_MS = 500; //+
+    //private static final float CM_THRESHOLD = 100f;  //lee
+    private static final long DISAPPEAR_MS = 5000; //+
 
     private float pxPerCm = -1f;
     private int lastMovedCount = 0;                 //lee
