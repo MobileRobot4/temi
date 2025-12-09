@@ -233,19 +233,10 @@ public class MainActivity extends AppCompatActivity
         buttonSetGuardian.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                if(guardians.size() == 0) {
-//                    guardians.add(new UserInfo("test_user_1","테스트1","https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/3c7d47258ab81fa7b96b7350be84d1bc/2e2f07cd-cce1-4ed4-9fbd-7b2266963dba.jpeg",0));
-//                }
                 Intent intent = new Intent (MainActivity.this,GuardianActivity.class);
                 ArrayList<UserInfo> guardianList = new ArrayList<>(guardians);
                 intent.putParcelableArrayListExtra("guardians",guardianList);
                 ArrayList<UserInfo> users = new ArrayList<>(robot.getAllContact());
-//                if(users.size() == 0) {
-//                    users.add(guardians.get(0));
-//                    for(int i = 0; i<20 ; i++) {
-//                        users.add(new UserInfo("test_user_" + i,"테스트" + i,"https://temi-media-public.s3.us-east-1.amazonaws.com/profile-images/f90924b852d82738de251e10956cd2ba/c7183245-e8d6-4d47-ac1b-30563c02907c.jpeg",2));
-//                    }
-//                }
                 intent.putParcelableArrayListExtra("users",users);
                 startActivityForResult(intent, REQUEST_CODE_FOR_GUARDIAN);
             }
