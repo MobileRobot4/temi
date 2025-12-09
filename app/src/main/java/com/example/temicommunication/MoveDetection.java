@@ -79,7 +79,7 @@ public class MoveDetection {
         float currentPxPerCm = (pxPerCm > 0) ? pxPerCm : 5.0f;
 
         // 2. 히스토리 업데이트 (각 랜드마크별)
-        updateHistor(PoseLandmark.NOSE, pN, nowMs);
+        updateHistory(PoseLandmark.NOSE, pN, nowMs);
         updateHistory(PoseLandmark.LEFT_SHOULDER, pL, nowMs);
         updateHistory(PoseLandmark.RIGHT_SHOULDER, pR, nowMs);
 
@@ -114,6 +114,8 @@ public class MoveDetection {
                 return true; // 낙상 감지!
             }
         }
+
+        return false;
     }
 
 //    /** 1초 내 60cm 이상 이동한 포인트가 3개 이상이면 true */ //lee
@@ -177,42 +179,42 @@ public class MoveDetection {
 //    }
 //// ======================================================
 //
-//    // 특정 랜드마크의 데이터를 큐에 넣고 오래된 데이터 삭제
-//
-//    private void updateHistory(int type, PointF p, long nowMs) {
-//        Deque<Sample> q = history.get(type);
-//        if (q == null) {
-//            q = new ArrayDeque<>();
-//            history.put(type, q);
-//        }
-//        q.addLast(new Sample(p.x, p.y, nowMs));
-//
-//        // 윈도우 시간(0.5초) 지난 데이터 삭제
-//        while (!q.isEmpty() && nowMs - q.peekFirst().t > WINDOW_MS) {
-//            q.removeFirst();
-//        }
-//    }
-//
-//    // 특정 랜드마크의 Y축 하강 속도 계산 (cm/sec)
-//    private float getVerticalSpeed(int type, float currentPxPerCm, long nowMs) {
-//        Deque<Sample> q = history.get(type);
-//        if (q == null || q.size() < 2) return 0f;
-//
-//        Sample start = q.peekFirst(); // 약 0.5초 전
-//        Sample end   = q.peekLast();  // 현재
-//
-//        // 시간 차이 (초 단위)
-//        float timeSec = (end.t - start.t) / 1000f;
-//        if (timeSec < 0.1f) return 0f; // 너무 짧으면 계산 스킵
-//
-//        // Y축 변화량 (Android는 아래쪽이 +Y)
-//        // 떨어질 때: end.y > start.y
-//        float distY_px = end.y - start.y;
-//
-//        // 올라가는 경우(음수)는 낙상이 아니므로 0 처리
-//        if (distY_px < 0) return 0f;
-//
-//        return (distY_px / currentPxPerCm) / timeSec;
-//    }
-//
+    // 특정 랜드마크의 데이터를 큐에 넣고 오래된 데이터 삭제
+
+    private void updateHistory(int type, PointF p, long nowMs) {
+        Deque<Sample> q = history.get(type);
+        if (q == null) {
+         q = new ArrayDeque<>();
+            history.put(type, q);
+        }
+        q.addLast(new Sample(p.x, p.y, nowMs));
+
+        // 윈도우 시간(0.5초) 지난 데이터 삭제
+        while (!q.isEmpty() && nowMs - q.peekFirst().t > WINDOW_MS) {
+            q.removeFirst();
+        }
+    }
+
+    // 특정 랜드마크의 Y축 하강 속도 계산 (cm/sec)
+    private float getVerticalSpeed(int type, float currentPxPerCm, long nowMs) {
+        Deque<Sample> q = history.get(type);
+        if (q == null || q.size() < 2) return 0f;
+
+        Sample start = q.peekFirst(); // 약 0.5초 전
+        Sample end   = q.peekLast();  // 현재
+
+        // 시간 차이 (초 단위)
+        float timeSec = (end.t - start.t) / 1000f;
+        if (timeSec < 0.1f) return 0f; // 너무 짧으면 계산 스킵
+
+        // Y축 변화량 (Android는 아래쪽이 +Y)
+        // 떨어질 때: end.y > start.y
+        float distY_px = end.y - start.y;
+
+        // 올라가는 경우(음수)는 낙상이 아니므로 0 처리
+        if (distY_px < 0) return 0f;
+
+        return (distY_px / currentPxPerCm) / timeSec;
+    }
+
 }
