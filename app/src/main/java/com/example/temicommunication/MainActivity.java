@@ -113,8 +113,6 @@ public class MainActivity extends AppCompatActivity {
                 distanceText.setText("fail");
             }
         });
-
-        robot.setDetectionModeOn(true, 2);
     }
 
     // ===== 추가: 권한 콜백에서 카메라 시작 =====
