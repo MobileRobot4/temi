@@ -1,4 +1,3 @@
-
 package com.example.temicommunication.util.move;
 
 import android.graphics.PointF;
@@ -25,7 +24,7 @@ public class MoveDetection {
 
     // 설정값
     private static final long WINDOW_MS = 600;       // 1초 -> 0.6초로 단축 (낙상은 순간적임)
-    private static final float FALL_VELOCITY_CM = 60f; // 초속 60cm 이상 하강 시 의심
+    private static final float FALL_VELOCITY_CM = 50f; // 초속 60cm 이상 하강 시 의심
     private static final float FALL_ANGLE_DEG = 30f;   // 어깨 기울기가 30도 이상 틀어지면 의심
     private static final long ALERT_COOLDOWN_MS = 5000;
     //private static final float CM_THRESHOLD = 100f;  //lee
@@ -154,69 +153,6 @@ public class MoveDetection {
 
         return false;
     }
-
-//    /** 1초 내 60cm 이상 이동한 포인트가 3개 이상이면 true */ //lee
-//    public boolean updateAndCheck(Pose pose, long nowMs){
-//        if (pose == null) return false;
-//
-//        // 어깨폭≈38cm로 px→cm 간이 보정
-//        if (pxPerCm <= 0f){
-//            PoseLandmark L = pose.getPoseLandmark(PoseLandmark.LEFT_SHOULDER);
-//            PoseLandmark R = pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER);
-//            if (L!=null && R!=null){
-//                PointF a = L.getPosition();
-//                PointF b = R.getPosition();
-//                float shoulderPx = (float) Math.hypot(a.x-b.x, a.y-b.y);
-//                if (shoulderPx > 10f) pxPerCm = shoulderPx / 38f; //lee
-//            }
-//        }
-//
-//        int moved = 0;
-//        float pxTh = (pxPerCm > 0f) ? (CM_THRESHOLD * pxPerCm) : 240f; // 60cm*pxPerCm 불가시 임시값 상향 //lee
-//
-//        for (int type : TARGET){
-//            PoseLandmark lm = pose.getPoseLandmark(type);
-//            if (lm == null) continue;
-//
-//            PointF p = lm.getPosition();
-//
-//            // API23 호환(get/put)  //lee
-//            Deque<Sample> q = history.get(type);
-//            if (q == null) {
-//                q = new ArrayDeque<>();
-//                history.put(type, q);
-//            }
-//
-//            q.addLast(new Sample(p.x, p.y, nowMs));
-//
-//            // 1초 윈도우 유지(NPE 안전)  //lee
-//            Sample head = q.peekFirst();
-//            while (head != null && nowMs - head.t > WINDOW_MS) {
-//                q.removeFirst();
-//                head = q.peekFirst();
-//            }
-//
-//            if (q.size() >= 2) {
-//                Sample first = q.peekFirst();
-//                Sample last  = q.peekLast();
-//                if (first != null && last != null) {
-//                    float distPx = (float) Math.hypot(last.x - first.x, last.y - first.y);
-//                    if (distPx >= pxTh) moved++;
-//                }
-//            }
-//        }
-//
-//        lastMovedCount = moved;  //lee
-//
-//        if (moved >= 3 && nowMs - lastAlert > ALERT_COOLDOWN_MS){
-//            lastAlert = nowMs;
-//            return true;
-//        }
-//        return false;
-//    }
-//// ======================================================
-//
-    // 특정 랜드마크의 데이터를 큐에 넣고 오래된 데이터 삭제
 
     private void updateHistory(int type, PointF p, long nowMs) {
         Deque<Sample> q = history.get(type);

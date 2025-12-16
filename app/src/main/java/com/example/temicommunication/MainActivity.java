@@ -88,6 +88,8 @@ public class MainActivity extends AppCompatActivity
     private static final int EMERGENCY_COUNT_MAX = 10;
     private static final int AIR_WARNING_INTERVAL = 60000;
     private static final int AIR_DANGER_INTERVAL = 3000;
+    private static final int MOVE_DETECTION_INTERVAL = 60000;
+    private boolean cameraOnLogged = false;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
@@ -110,6 +112,8 @@ public class MainActivity extends AppCompatActivity
     long heartRateCheckTime;
     long emergencyStartTime;
     long startCallTime;
+    long airWarnTime;
+    long moveDetectionTime = 0;
     Robot robot;
     List<UserInfo> guardians = new ArrayList<>();
     List<UserInfo> calledGuardians = new ArrayList<>();
@@ -167,9 +171,13 @@ public class MainActivity extends AppCompatActivity
         warnRunnable = new Runnable() {
             @Override
             public void run() {
-                TtsRequest request = TtsRequest.create("환기를 시켜주세요",false);
-                robot.speak(request);
-                warnHandler.postDelayed(this,AIR_WARNING_INTERVAL);
+                if(System.currentTimeMillis() - airWarnTime > MOVE_DETECTION_INTERVAL){
+                    TtsRequest request = TtsRequest.create("환기를 시켜주세요",false);
+                    robot.speak(request);
+                    warnHandler.postDelayed(this,AIR_WARNING_INTERVAL);
+                } else {
+                    warnHandler.postDelayed(this,5000);
+                }
             }
         };
         dangerRunnable = new Runnable() {
@@ -197,6 +205,7 @@ public class MainActivity extends AppCompatActivity
                             imageViewAir.setImageResource(R.drawable.warn);
                             warnHandler.post(warnRunnable);
                             imageViewAir.setContentDescription("경고");
+                            airWarnTime = System.currentTimeMillis();
                         }
                         break;
                     case 3:
@@ -313,6 +322,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void startCamera() {
+        cameraOnLogged = false;
         ListenableFuture<ProcessCameraProvider> future = ProcessCameraProvider.getInstance(this);
         future.addListener(() -> {
             try {
@@ -336,15 +346,20 @@ public class MainActivity extends AppCompatActivity
             imageProxy.close();
             return;
         }
+        if (!cameraOnLogged) {
+            Log.d("Camera X","카메라 켜졌습니다");
+            cameraOnLogged = true;
+        }
         int rot = imageProxy.getImageInfo().getRotationDegrees();
         InputImage input = InputImage.fromMediaImage(imageProxy.getImage(), rot);
         poseDetector.process(input)
                 .addOnSuccessListener((Pose pose) -> {
                     long now = System.currentTimeMillis();
                     boolean hit = moveDetection.updateAndCheck(pose, now);
-                    if (hit) {
+                    if (hit && System.currentTimeMillis() - moveDetectionTime > 600000) {
                         Log.d("디버그", "넘어짐감지됨");
                         buttonEmergency.callOnClick();
+                        moveDetectionTime = System.currentTimeMillis();
                     }
                     imageProxy.close();
                 }).addOnFailureListener(e -> imageProxy.close());
