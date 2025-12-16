@@ -23,7 +23,7 @@
         android:backgroundTint="#6546FF"
         android:text="완료"
         android:textSize="40sp"
-        android:fontFamily="@font/BMJUA_ttf"
+        android:fontFamily="@font/bm_jua"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

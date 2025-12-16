@@ -153,7 +153,8 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == REQUEST_CODE_FOR_GUARDIAN){
-            if(requestCode == RESULT_OK){
+            if(resultCode == RESULT_OK){
+                Log.d("디버그", data.getParcelableArrayListExtra("guardians").toString());
                 guardianResult = true;
                 guardians.clear();
                 guardians.addAll(data.getParcelableArrayListExtra("guardians"));

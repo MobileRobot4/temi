@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity
     boolean isExercise = false;
     boolean isSleep = false;
     boolean emergency = false;
-    boolean hideEmergencyButton = true;
+    boolean hideEmergencyButton = false;
     int emergencyHeartCount = 0;
     long heartRateCheckTime;
     long emergencyStartTime;
@@ -131,6 +131,7 @@ public class MainActivity extends AppCompatActivity
         loadGuardianList();
         loadAvgHeartRate();
         setupEmergencyCancelButtonListener();
+        previewView = new PreviewView();
         imageViewAir = findViewById(R.id.imageViewAir);
         textViewAir = findViewById(R.id.textViewAir);
         poseDetector = PoseDetection.getClient(new PoseDetectorOptions.Builder()
@@ -247,6 +248,7 @@ public class MainActivity extends AppCompatActivity
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_FOR_EMERGENCY) {
             if (resultCode != 4) {
+                robot.cancelAllTtsRequests();
                 emergencyEnded();
             } else {
                 callEmergency();
@@ -270,6 +272,7 @@ public class MainActivity extends AppCompatActivity
             if (stableHeartRateAvg == 0) {
                 showNotHeartRateDialog();
             }
+            heartRateRef.addValueEventListener(this);
         }
     }
 
@@ -396,6 +399,7 @@ public class MainActivity extends AppCompatActivity
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     if (!calling.compareAndSet(false, true)) return;
+                    Log.d("디버그","살려주세요 감지됨");
                     buttonEmergency.callOnClick();
                     // 10초 후 다시 허용
                     new Handler(Looper.getMainLooper())

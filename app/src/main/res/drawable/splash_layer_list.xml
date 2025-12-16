@@ -3,7 +3,11 @@
     <item android:drawable="@android:color/white" />
 
     <item>
-        <bitmap
+        <inset
+            android:insetLeft="80dp"    android:insetRight="80dp"   android:insetTop="80dp"     android:insetBottom="80dp">
+            <bitmap
             android:gravity="center"
-            android:src="@drawable/app_icon" /> </item>
+            android:src="@drawable/app_icon" />
+        </inset>
+    </item>
 </layer-list>

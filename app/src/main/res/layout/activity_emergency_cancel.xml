@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:text="응급상황이 아니라면 빨간버튼을 누르세요"
         android:textColor="#000000"
-        android:fontFamily="@font/BMJUA_ttf"
+        android:fontFamily="@font/bm_jua"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

@@ -49,7 +49,7 @@
         android:layout_height="37dp"
         android:text="온도 : 0도    습도 : 0%   이산화탄소 : 0ppm   미세먼지 : 0   초미세먼지 : 0"
         android:textSize="25sp"
-        android:fontFamily="@font/BMJUA_ttf"
+        android:fontFamily="@font/bm_jua"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.2"
