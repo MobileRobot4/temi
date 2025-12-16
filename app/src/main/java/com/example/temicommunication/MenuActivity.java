@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -36,8 +37,8 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference heartRateRef = firebaseDatabase.getReference("HeartRate");
     Button buttonSetGuardian;
-    Button buttonExercise;
-    Button buttonSleep;
+    ImageButton buttonExercise;
+    ImageButton buttonSleep;
     Button buttonCheckHeart;
     ImageButton buttonClose;
     List<UserInfo> guardians = new ArrayList<>();
@@ -65,13 +66,15 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
         buttonCheckHeart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(buttonCheckHeart.getText().equals("심박수측정하기(약20초)")){
+                if(buttonCheckHeart.getText().equals("심박수측정하기        (약20초)")){
                     buttonCheckHeart.setText("안정된 상태입니까?");
+                    buttonCheckHeart.setTextSize(TypedValue.COMPLEX_UNIT_SP,32f);
                 } else if(buttonCheckHeart.getText().equals("안정된 상태입니까?")){
                     checkHeartRate = true;
                     checkHeartRateStartDate = System.currentTimeMillis();
                     checkHeartRateCount = 0;
                     buttonCheckHeart.setText("심박수측정중...[0/20]");
+                    buttonCheckHeart.setTextSize(TypedValue.COMPLEX_UNIT_SP,43f);
                     heartRateRef.addValueEventListener(MenuActivity.this);
                 }
             }
@@ -80,30 +83,32 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
         buttonExercise.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(buttonExercise.getText().equals("운동시작")){
+                if(buttonExercise.getContentDescription().toString().equals("운동")){
                     isExercise = true;
-                    exerciseResult = true;
-                    buttonExercise.setText("운동종료");
-                } else if(buttonExercise.getText().equals("운동종료")){
+                    buttonExercise.setImageResource(R.drawable.exercise_end);
+                    buttonExercise.setContentDescription("운동종료");
+                } else if(buttonExercise.getContentDescription().toString().equals("운동종료")){
                     isExercise = false;
-                    exerciseResult = true;
-                    buttonExercise.setText("운동시작");
+                    buttonExercise.setImageResource(R.drawable.exercise);
+                    buttonExercise.setContentDescription("운동");
                 }
+                exerciseResult = true;
             }
         });
         buttonSleep = findViewById(R.id.buttonSleep);
         buttonSleep.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(buttonSleep.getText().equals("취침시작")){
+                if(buttonSleep.getContentDescription().toString().equals("수면")){
                     isSleep = true;
-                    sleepResult = true;
-                    buttonSleep.setText("기상");
-                } else if(buttonSleep.getText().equals("기상")){
+                    buttonSleep.setImageResource(R.drawable.sleep_end);
+                    buttonSleep.setContentDescription("수면종료");
+                } else if(buttonSleep.getContentDescription().toString().equals("수면종료")){
                     isSleep = false;
-                    sleepResult = true;
-                    buttonSleep.setText("취침시작");
+                    buttonSleep.setImageResource(R.drawable.sleep);
+                    buttonSleep.setContentDescription("수면");
                 }
+                sleepResult = true;
             }
         });
         buttonSetGuardian = findViewById(R.id.buttonGuardian);
@@ -171,6 +176,7 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
                     if (checkHeartRateCount == 20) {
                         checkHeartRate = false;
                         buttonCheckHeart.setText("심박수측정완료");
+                        buttonCheckHeart.setTextSize(TypedValue.COMPLEX_UNIT_SP,42f);
                         stableHeartRateAvg = 0;
                         for (int i = 0; i < 20; i++) {
                             stableHeartRateAvg += stableHeartRate[i];
@@ -184,7 +190,7 @@ public class MenuActivity extends AppCompatActivity implements ValueEventListene
                         } catch (Exception e) {
                             Log.e("스레드", e.getMessage());
                         }
-                        buttonCheckHeart.setText("심박수측정하기(약20초)");
+                        buttonCheckHeart.setText("심박수측정하기        (약20초)");
                     } else {
                         buttonCheckHeart.setText("심박수측정중...[" + checkHeartRateCount + "/20]");
                     }

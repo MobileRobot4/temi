@@ -37,9 +37,24 @@
         android:id="@+id/imageViewAir"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:srcCompat="@drawable/emergency"
+        app:srcCompat="@drawable/smile"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/textViewAir"
+        android:layout_width="1200dp"
+        android:layout_height="37dp"
+        android:text="온도 : 0도    습도 : 0%   이산화탄소 : 0ppm   미세먼지 : 0   초미세먼지 : 0"
+        android:textSize="25sp"
+        android:fontFamily="@font/BMJUA_ttf"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.025"
+        app:srcCompat="@drawable/smile" />
 </androidx.constraintlayout.widget.ConstraintLayout>

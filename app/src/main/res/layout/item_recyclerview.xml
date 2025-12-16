@@ -27,21 +27,24 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1" android:layout_marginStart="16dp"
-            android:textSize="16sp"
+            android:textSize="20sp"
+            android:fontFamily="@font/BMJUA_ttf"
             android:textColor="#000"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/button"
-            android:textSize="29sp"
-            android:textStyle="bold"
+            android:layout_width="60dp"
+            android:layout_height="53dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="0dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="+"
             android:gravity="center"
-            android:padding="0dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="0dp"/>
+            android:padding="0dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/insert" />
     </LinearLayout>
 
     <View

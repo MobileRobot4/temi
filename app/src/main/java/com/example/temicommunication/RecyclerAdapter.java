@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -58,7 +59,7 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
     class ViewHolder extends RecyclerView.ViewHolder {
         ImageView profile;
         TextView name;
-        Button button;
+        ImageButton button;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -74,23 +75,23 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
                     .into(profile);
             name.setText(item.getName());
             if(guardianList.contains(item)) {
-                button.setBackgroundColor(Color.RED);
-                button.setText("-");
+                button.setImageResource(R.drawable.delete);
+                button.setContentDescription("-");
             } else {
-                button.setBackgroundColor(Color.BLUE);
-                button.setText("+");
+                button.setImageResource(R.drawable.insert);
+                button.setContentDescription("+");
             }
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if(button.getText().equals("+")){
+                    if(button.getContentDescription().toString().equals("+")){
                         guardianList.add(item);
-                        button.setBackgroundColor(Color.RED);
-                        button.setText("-");
-                    } else if(button.getText().equals("-")){
+                        button.setImageResource(R.drawable.delete);
+                        button.setContentDescription("-");
+                    } else if(button.getContentDescription().toString().equals("-")){
                         guardianList.remove(item);
-                        button.setBackgroundColor(Color.BLUE);
-                        button.setText("+");
+                        button.setImageResource(R.drawable.insert);
+                        button.setContentDescription("+");
                     }
                     RecyclerAdapter.this.notifyItemChanged(getAdapterPosition());
                 }

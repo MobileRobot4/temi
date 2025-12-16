@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -74,6 +75,8 @@ public class MainActivity extends AppCompatActivity
 
     private ValueEventListener emergencyCancelButtonListener;
     private PorcupineVoiceDetector voiceDetector;
+    private Handler warnHandler = new Handler();
+    private Runnable warnRunnable;
     private final MoveDetection moveDetection = new MoveDetection();
     private final AtomicBoolean calling = new AtomicBoolean(false);
     private static final int REQUEST_CODE_FOR_MENU = 1001;
@@ -81,6 +84,7 @@ public class MainActivity extends AppCompatActivity
     private static final int REQUEST_CODE_FOR_CAMERA = 1003;
     private static final int REQUEST_CODE_FOR_AUDIO = 1004;
     private static final int EMERGENCY_COUNT_MAX = 10;
+    private static final int AIR_WARNING_INTERVAL = 60000;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
@@ -89,6 +93,7 @@ public class MainActivity extends AppCompatActivity
     DatabaseReference emergencyCancelRef = firebaseDatabase.getReference("EmergencyCancel");
     DatabaseReference emergencyRef = firebaseDatabase.getReference("Emergency");
     Button buttonEmergency;
+    TextView textViewAir;
     ImageButton buttonMenu;
     ImageView imageViewAir;
     PreviewView previewView;
@@ -127,6 +132,7 @@ public class MainActivity extends AppCompatActivity
         loadAvgHeartRate();
         setupEmergencyCancelButtonListener();
         imageViewAir = findViewById(R.id.imageViewAir);
+        textViewAir = findViewById(R.id.textViewAir);
         poseDetector = PoseDetection.getClient(new PoseDetectorOptions.Builder()
                 .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
                 .build());
@@ -155,6 +161,14 @@ public class MainActivity extends AppCompatActivity
             intent.putExtra("startTime", emergencyStartTime);
             startActivityForResult(intent, REQUEST_CODE_FOR_EMERGENCY);
         });
+        warnRunnable = new Runnable() {
+            @Override
+            public void run() {
+                TtsRequest request = TtsRequest.create("환기를 시켜주세요",false);
+                robot.speak(request);
+                warnHandler.postDelayed(this,AIR_WARNING_INTERVAL);
+            }
+        };
         heartRateRef.addValueEventListener(this);
         analysisRef.addValueEventListener(new ValueEventListener() {
             @Override
@@ -162,10 +176,12 @@ public class MainActivity extends AppCompatActivity
                 AnalysisData value = snapshot.getValue(AnalysisData.class);
                 switch (value.getStatus()) {
                     case 1:
+                        warnHandler.removeCallbacks(warnRunnable);
                         imageViewAir.setImageResource(R.drawable.smile);
                         break;
                     case 2:
                         imageViewAir.setImageResource(R.drawable.warn);
+                        warnHandler.post(warnRunnable);
                         break;
                     case 3:
                         imageViewAir.setImageResource(R.drawable.emergency);
@@ -181,9 +197,11 @@ public class MainActivity extends AppCompatActivity
             }
         });
         sensorRef.addValueEventListener(new ValueEventListener() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onDataChange(@Nonnull DataSnapshot snapshot) {
                 SensorData value = snapshot.getValue(SensorData.class);
+                textViewAir.setText("온도 : " + value.getTemperature() + "도    습도 : " + value.getHumidity() + "%   이산화탄소 : " + value.getCO2() + "ppm   미세먼지 : " + value.getPM10() + "   초미세먼지 : "+ value.getPM2_5());
             }
 
             @Override
@@ -303,6 +321,7 @@ public class MainActivity extends AppCompatActivity
                     long now = System.currentTimeMillis();
                     boolean hit = moveDetection.updateAndCheck(pose, now);
                     if (hit) {
+                        Log.d("디버그", "넘어짐감지됨");
                         buttonEmergency.callOnClick();
                     }
                     imageProxy.close();
@@ -388,7 +407,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onStart() {
-        Log.d("디버그", "onStart");
         super.onStart();
         robot.addOnRobotReadyListener(this);
         robot.addOnBeWithMeStatusChangedListener(this);
@@ -397,7 +415,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onStop() {
-        Log.d("디버그", "onStop");
         super.onStop();
         robot.removeOnRobotReadyListener(this);
         robot.removeOnBeWithMeStatusChangedListener(this);
@@ -406,7 +423,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onRobotReady(boolean isReady) {
-        Log.d("디버그", "로봇준비됨");
         if (isReady) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_FOR_CAMERA);
@@ -433,7 +449,6 @@ public class MainActivity extends AppCompatActivity
     //로봇이 따라가기 상태가 변할때 실행하는 메서드
     @Override
     public void onBeWithMeStatusChanged(String status) {
-        Log.d("디버그", "따라가기상태변화");
         switch (status) {
             case ABORT:             //따라가기 중단됐을때
                 break;
