@@ -76,7 +76,9 @@ public class MainActivity extends AppCompatActivity
     private ValueEventListener emergencyCancelButtonListener;
     private PorcupineVoiceDetector voiceDetector;
     private Handler warnHandler = new Handler();
+    private Handler dangerHandler = new Handler();
     private Runnable warnRunnable;
+    private Runnable dangerRunnable;
     private final MoveDetection moveDetection = new MoveDetection();
     private final AtomicBoolean calling = new AtomicBoolean(false);
     private static final int REQUEST_CODE_FOR_MENU = 1001;
@@ -85,6 +87,7 @@ public class MainActivity extends AppCompatActivity
     private static final int REQUEST_CODE_FOR_AUDIO = 1004;
     private static final int EMERGENCY_COUNT_MAX = 10;
     private static final int AIR_WARNING_INTERVAL = 60000;
+    private static final int AIR_DANGER_INTERVAL = 3000;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
@@ -102,7 +105,7 @@ public class MainActivity extends AppCompatActivity
     boolean isExercise = false;
     boolean isSleep = false;
     boolean emergency = false;
-    boolean hideEmergencyButton = false;
+    boolean hideEmergencyButton = true;
     int emergencyHeartCount = 0;
     long heartRateCheckTime;
     long emergencyStartTime;
@@ -131,7 +134,6 @@ public class MainActivity extends AppCompatActivity
         loadGuardianList();
         loadAvgHeartRate();
         setupEmergencyCancelButtonListener();
-        previewView = new PreviewView();
         imageViewAir = findViewById(R.id.imageViewAir);
         textViewAir = findViewById(R.id.textViewAir);
         poseDetector = PoseDetection.getClient(new PoseDetectorOptions.Builder()
@@ -170,6 +172,14 @@ public class MainActivity extends AppCompatActivity
                 warnHandler.postDelayed(this,AIR_WARNING_INTERVAL);
             }
         };
+        dangerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                TtsRequest request = TtsRequest.create("비상", false);
+                robot.speak(request);
+                dangerHandler.postDelayed(this,AIR_DANGER_INTERVAL);
+            }
+        };
         heartRateRef.addValueEventListener(this);
         analysisRef.addValueEventListener(new ValueEventListener() {
             @Override
@@ -178,14 +188,23 @@ public class MainActivity extends AppCompatActivity
                 switch (value.getStatus()) {
                     case 1:
                         warnHandler.removeCallbacks(warnRunnable);
+                        dangerHandler.removeCallbacks(dangerRunnable);
                         imageViewAir.setImageResource(R.drawable.smile);
+                        imageViewAir.setContentDescription("정상");
                         break;
                     case 2:
-                        imageViewAir.setImageResource(R.drawable.warn);
-                        warnHandler.post(warnRunnable);
+                        if(!imageViewAir.getContentDescription().toString().equals("경고")){
+                            imageViewAir.setImageResource(R.drawable.warn);
+                            warnHandler.post(warnRunnable);
+                            imageViewAir.setContentDescription("경고");
+                        }
                         break;
                     case 3:
-                        imageViewAir.setImageResource(R.drawable.emergency);
+                        if(!imageViewAir.getContentDescription().toString().equals("위험")){
+                            imageViewAir.setImageResource(R.drawable.emergency);
+                            dangerHandler.post(dangerRunnable);
+                            imageViewAir.setContentDescription("위험");
+                        }
                         break;
                     default:
                         break;
@@ -299,13 +318,13 @@ public class MainActivity extends AppCompatActivity
             try {
                 ProcessCameraProvider provider = future.get();
                 Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
                 ImageAnalysis analysis = new ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
                 analysis.setAnalyzer(Executors.newSingleThreadExecutor(), this::analyze);
                 provider.unbindAll();
-                provider.bindToLifecycle(this, selector, preview, analysis);
+                provider.bindToLifecycle(this, selector, analysis);
             } catch (Exception e) {
                 Log.e("카메라", "카메라오류 : " + e.getMessage());
             }
@@ -399,9 +418,8 @@ public class MainActivity extends AppCompatActivity
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     if (!calling.compareAndSet(false, true)) return;
-                    Log.d("디버그","살려주세요 감지됨");
                     buttonEmergency.callOnClick();
-                    // 10초 후 다시 허용
+                    // 10초 후 다시 허용ㅎ
                     new Handler(Looper.getMainLooper())
                             .postDelayed(() -> calling.set(false), 10_000);
                 })
