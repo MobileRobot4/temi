@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/viewMain"
+    tools:context=".MainActivity">
+
+    <Button
+        android:id="@+id/buttonGuardian"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:text="보호자설정"
+        android:textSize="50dp"
+        android:textStyle="bold"
+        android:fontFamily="@font/bm_jua"
+        android:backgroundTint="#6546FF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.782"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.154" />
+
+    <ImageButton
+        android:id="@+id/buttonSleep"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="수면"
+        android:scaleType="fitCenter"
+        android:src="@drawable/sleep"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.782"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.888" />
+
+    <ImageButton
+        android:id="@+id/buttonExercise"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="운동"
+        android:scaleType="fitCenter"
+        android:src="@drawable/exercise"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.23"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.888" />
+
+    <Button
+        android:id="@+id/buttonCheckHeart"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:text="심박수측정하기        (약20초)"
+        android:textSize="42sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/bm_jua"
+        android:backgroundTint="#6546FF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.23"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.154" />
+
+    <ImageButton
+        android:id="@+id/buttonClose"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="닫기"
+        android:scaleType="fitCenter"
+        android:src="@drawable/close"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.987"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.021" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
