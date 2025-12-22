@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity
     private PorcupineVoiceDetector voiceDetector;
     private Handler warnHandler = new Handler();
     private Handler dangerHandler = new Handler();
+    private Handler missingAlertHandler = new Handler();
     private Runnable warnRunnable;
     private Runnable dangerRunnable;
     private final MoveDetection moveDetection = new MoveDetection();
@@ -90,6 +91,7 @@ public class MainActivity extends AppCompatActivity
     private static final int AIR_DANGER_INTERVAL = 3000;
     private static final int MOVE_DETECTION_INTERVAL = 60000;
     private boolean cameraOnLogged = false;
+    private boolean isWarningActive = false;
 
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference analysisRef = firebaseDatabase.getReference("Analysis");
@@ -139,6 +141,7 @@ public class MainActivity extends AppCompatActivity
         loadAvgHeartRate();
         setupEmergencyCancelButtonListener();
         imageViewAir = findViewById(R.id.imageViewAir);
+        imageViewAir.setContentDescription("정상");
         textViewAir = findViewById(R.id.textViewAir);
         poseDetector = PoseDetection.getClient(new PoseDetectorOptions.Builder()
                 .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
@@ -157,12 +160,12 @@ public class MainActivity extends AppCompatActivity
                 return;
             }
             //여기에 응급상황(의심)발생시의 로직 생성
-            TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기아래 버튼을 클릭하거나 화면의 버튼을 클릭해주세요", false);
+            TtsRequest ttsRequest = TtsRequest.create("응급상황이 의심됩니다. 응급상황이 아닐경우 기기뒤의 버튼을 누르거나 화면의 빨간부분을 터치해주세요", false);
             robot.speak(ttsRequest);
             emergencyCancelRef.setValue(false);
-            emergency = true;
             emergencyRef.setValue(true);
             emergencyCancelRef.addValueEventListener(emergencyCancelButtonListener);
+            emergency = true;
             emergencyStartTime = System.currentTimeMillis();
             Intent intent = new Intent(MainActivity.this, EmergencyCancelActivity.class);
             intent.putExtra("startTime", emergencyStartTime);
@@ -185,6 +188,7 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 TtsRequest request = TtsRequest.create("비상", false);
                 robot.speak(request);
+                buttonEmergency.callOnClick();
                 dangerHandler.postDelayed(this,AIR_DANGER_INTERVAL);
             }
         };
@@ -346,23 +350,101 @@ public class MainActivity extends AppCompatActivity
             imageProxy.close();
             return;
         }
-        if (!cameraOnLogged) {
-            Log.d("Camera X","카메라 켜졌습니다");
-            cameraOnLogged = true;
+        if (poseDetector == null) {
+            imageProxy.close();
+            return;
         }
-        int rot = imageProxy.getImageInfo().getRotationDegrees();
-        InputImage input = InputImage.fromMediaImage(imageProxy.getImage(), rot);
-        poseDetector.process(input)
-                .addOnSuccessListener((Pose pose) -> {
-                    long now = System.currentTimeMillis();
-                    boolean hit = moveDetection.updateAndCheck(pose, now);
-                    if (hit && System.currentTimeMillis() - moveDetectionTime > 600000) {
-                        Log.d("디버그", "넘어짐감지됨");
-                        buttonEmergency.callOnClick();
-                        moveDetectionTime = System.currentTimeMillis();
-                    }
-                    imageProxy.close();
-                }).addOnFailureListener(e -> imageProxy.close());
+
+        try {
+            if (!cameraOnLogged) {
+                Log.d("Camera X", "카메라 정상 작동 중");
+                cameraOnLogged = true;
+            }
+
+            int rot = imageProxy.getImageInfo().getRotationDegrees();
+            InputImage input = InputImage.fromMediaImage(imageProxy.getImage(), rot);
+
+            poseDetector.process(input)
+                    .addOnSuccessListener((Pose pose) -> {
+                        try {
+                            long now = System.currentTimeMillis();
+
+                            // 1. MoveDetection 업데이트
+                            boolean hit = moveDetection.updateAndCheck(pose, now);
+
+                            // 2. 낙상 감지 (기존 기능)
+                            if (hit && System.currentTimeMillis() - moveDetectionTime > 6000) {
+                                Log.d("디버그", "넘어짐 감지됨!");
+                                buttonEmergency.callOnClick();
+                                moveDetectionTime = System.currentTimeMillis();
+                            }
+
+                            // 3. 사라짐 감지 (사람 미인식 -> 소리 경고 시작)
+                            if (moveDetection.checkMissingPerson(now)) {
+                                startMissingWarning(); // 바뀐 함수 호출
+                            }
+
+                            // 4. 사라짐 복구 (사람 재인식 -> 경고 취소)
+                            // 조건: (경고 중이고) && (사람이 다시 보이면)
+                            if (isWarningActive && moveDetection.isPersonVisible()) {
+                                runOnUiThread(() -> {
+                                    if (isWarningActive) {
+                                        Log.d("CheckMissing", "👀 사람 재인식됨! -> 경고 취소");
+
+                                        // 핸들러에 걸린 비상벨 타이머 취소!
+                                        missingAlertHandler.removeCallbacksAndMessages(null);
+
+                                        isWarningActive = false; // 경고 상태 해제
+
+                                        // 안심 멘트
+                                        robot.speak(TtsRequest.create("사용자가 인식되었습니다.", false));
+                                    }
+                                });
+                            }
+
+                        } catch (Exception e) {
+                            Log.e("Analyze", "로직 오류: " + e.getMessage());
+                        } finally {
+                            imageProxy.close();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        imageProxy.close();
+                    });
+
+        } catch (Exception e) {
+            imageProxy.close();
+        }
+    }
+
+    private void startMissingWarning() {
+        runOnUiThread(() -> {
+            // 이미 경고 중이면 또 실행하지 않음 (중복 방지)
+            if (isWarningActive) return;
+
+            Log.d("CheckMissing", "🔊 사람이 사라짐 -> 소리 경고 시작");
+            isWarningActive = true; // 경고 상태 켜기
+
+            // 1. 로봇이 말로 경고
+            robot.speak(TtsRequest.create("괜찮으십니까? 10초 후 비상 알림이 전송됩니다. 알림을 끄려면 카메라 앞에 서주세요.", false));
+
+            // 2. 10초 뒤 실행될 비상벨 행동
+            Runnable finalAlertRunnable = () -> {
+                Log.d("CheckMissing", "⏰ 10초 타임아웃 -> 비상벨 클릭 실행");
+
+                // 경고 상태 끄기 (비상 상황으로 넘어갔으므로)
+                isWarningActive = false;
+
+                // 비상벨 누르기
+//                emergency = true;
+//                emergencyStartTime = System.currentTimeMillis();
+//                onActivityResult(REQUEST_CODE_FOR_EMERGENCY, 4, new Intent());
+                buttonEmergency.callOnClick();
+            };
+
+            // 3. 타이머 시작 (10초 뒤 발동)
+            missingAlertHandler.postDelayed(finalAlertRunnable, 10000);
+        });
     }
 
     private void setupEmergencyCancelButtonListener() {
