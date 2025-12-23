@@ -55,6 +55,7 @@ import com.robotemi.sdk.listeners.OnRobotReadyListener;
 import com.robotemi.sdk.listeners.OnTelepresenceEventChangedListener;
 import com.robotemi.sdk.model.CallEventModel;
 import com.robotemi.sdk.model.MemberStatusModel;
+import com.robotemi.sdk.navigation.model.SpeedLevel;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -574,6 +575,7 @@ public class MainActivity extends AppCompatActivity
             case CALCULATING:       //따라가는중에 장애물을 발견해서 돌아가는길 계산중일때
                 break;
             case SEARCH:            //따라가기모드 실행되서 사람을 찾고있을때
+                robot.beWithMe(SpeedLevel.SLOW);
                 break;
             case START:             //따라가기모드 실행되고나서 사람을 찾고 따라가기 시작했을떄
                 break;
