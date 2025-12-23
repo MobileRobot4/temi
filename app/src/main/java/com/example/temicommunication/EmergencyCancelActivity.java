@@ -19,7 +19,7 @@ public class EmergencyCancelActivity extends AppCompatActivity {
 
     private Handler handler = new Handler();
     private static final int INTERVAL_MS = 1000;
-    private static final long MAX_WAIT_SECONDS = 15;
+    private static final long MAX_WAIT_SECONDS = 20;
     private static EmergencyCancelActivity instance;
 
     public static EmergencyCancelActivity getInstance(){

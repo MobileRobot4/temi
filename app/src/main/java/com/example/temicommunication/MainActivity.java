@@ -189,6 +189,7 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 TtsRequest request = TtsRequest.create("비상", false);
                 robot.speak(request);
+                Log.d("응급상황","공기이상");
                 buttonEmergency.callOnClick();
                 dangerHandler.postDelayed(this,AIR_DANGER_INTERVAL);
             }
@@ -375,7 +376,7 @@ public class MainActivity extends AppCompatActivity
 
                             // 2. 낙상 감지 (기존 기능)
                             if (hit && System.currentTimeMillis() - moveDetectionTime > 6000) {
-                                Log.d("디버그", "넘어짐 감지됨!");
+                                Log.d("응급상황", "넘어짐 감지됨!");
                                 buttonEmergency.callOnClick();
                                 moveDetectionTime = System.currentTimeMillis();
                             }
@@ -440,6 +441,7 @@ public class MainActivity extends AppCompatActivity
 //                emergency = true;
 //                emergencyStartTime = System.currentTimeMillis();
 //                onActivityResult(REQUEST_CODE_FOR_EMERGENCY, 4, new Intent());
+                Log.d("응급상황", "사용자 미감지");
                 buttonEmergency.callOnClick();
             };
 
@@ -516,6 +518,7 @@ public class MainActivity extends AppCompatActivity
                 "porcupine_params_ko.pv",
                 () -> runOnUiThread(() -> {
                     if (!calling.compareAndSet(false, true)) return;
+                    Log.d("응급상황","살려주세요 감지됨");
                     buttonEmergency.callOnClick();
                     // 10초 후 다시 허용ㅎ
                     new Handler(Looper.getMainLooper())
@@ -691,6 +694,7 @@ public class MainActivity extends AppCompatActivity
                         if (emergencyHeartCount >= EMERGENCY_COUNT_MAX) {
                             emergency = true;
                             emergencyHeartCount = 0;
+                            Log.d("응급상황", "심박수이상");
                             buttonEmergency.callOnClick();
                         } else {
                             emergencyHeartCount++;
